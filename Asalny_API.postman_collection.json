@@ -1,0 +1,830 @@
+{
+	"info": {
+		"_postman_id": "asalny-api-collection",
+		"name": "Asalny API",
+		"description": "Location-based mobile service API with SMS verification",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"أحمد محمد\",\n    \"phone\": \"+201234567890\",\n    \"email\": \"ahmed@example.com\",\n    \"gender\": \"male\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"register"
+							]
+						},
+						"description": "Register a new user (no password required)"
+					},
+					"response": []
+				},
+				{
+					"name": "Send Verification Code",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"phone\": \"+201234567890\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/login/send-code",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"login",
+								"send-code"
+							]
+						},
+						"description": "Send SMS verification code (expires in 1 minute)"
+					},
+					"response": []
+				},
+				{
+					"name": "Verify Code & Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.token) {",
+									"        pm.environment.set('auth_token', response.data.token);",
+									"        console.log('Token saved to environment');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"code\": \"12345\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/login/verify-code",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"login",
+								"verify-code"
+							]
+						},
+						"description": "Verify SMS code and login (auto-saves token)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Current User",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/me",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"me"
+							]
+						},
+						"description": "Get authenticated user info"
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/logout",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"logout"
+							]
+						},
+						"description": "Logout from current device"
+					},
+					"response": []
+				},
+				{
+					"name": "Logout All Devices",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/logout-all",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"logout-all"
+							]
+						},
+						"description": "Logout from all devices"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Locations",
+			"item": [
+				{
+					"name": "Get All My Locations",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/locations",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"locations"
+							]
+						},
+						"description": "Get all saved locations for authenticated user"
+					},
+					"response": []
+				},
+				{
+					"name": "Add Location",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"المنزل\",\n    \"latitude\": 30.0444,\n    \"longitude\": 31.2357,\n    \"address\": \"القاهرة، مصر\",\n    \"is_default\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/locations",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"locations"
+							]
+						},
+						"description": "Add new location (auto-detects duplicates)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Location by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/locations/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"locations",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Get specific location details"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Location",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"العمل\",\n    \"latitude\": 30.0444,\n    \"longitude\": 31.2357,\n    \"address\": \"القاهرة الجديدة، مصر\",\n    \"is_default\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/locations/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"locations",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Update location details"
+					},
+					"response": []
+				},
+				{
+					"name": "Set Default Location",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/locations/:id/set-default",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"locations",
+								":id",
+								"set-default"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Set location as current/default"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Location",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/locations/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"locations",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Delete a location"
+					},
+					"response": []
+				},
+				{
+					"name": "Search Nearby Locations",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"latitude\": 30.0444,\n    \"longitude\": 31.2357,\n    \"radius\": 10\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/locations/search/nearby",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"locations",
+								"search",
+								"nearby"
+							]
+						},
+						"description": "Search locations within radius (km)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Nearby Users (Auto)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/locations/nearby-users",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"locations",
+								"nearby-users"
+							]
+						},
+						"description": "Get users within 1km of my default location"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Nearby Users (Coordinates)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"latitude\": 30.0444,\n    \"longitude\": 31.2357\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/locations/nearby-users/search",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"locations",
+								"nearby-users",
+								"search"
+							]
+						},
+						"description": "Get users within 1km of specified coordinates"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Questions - Asker (is_asker=true, DEFAULT)",
+			"item": [
+				{
+					"name": "Get My Questions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/questions",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"questions"
+							]
+						},
+						"description": "Get all my questions (Askers only - is_asker=true)"
+					},
+					"response": []
+				},
+				{
+					"name": "Add Question",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"question\": \"محتاج توصيلة من الهرم للمعادي\",\n    \"price\": 50.00\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/questions",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"questions"
+							]
+						},
+						"description": "Add new question (Askers only - is_asker=true)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Question",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"question\": \"محتاج توصيلة من الهرم للمعادي - عاجل\",\n    \"price\": 75.00,\n    \"is_active\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/questions/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"questions",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Update question (Askers only - is_asker=true)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Question",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/questions/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"questions",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Delete specific question (Askers only - is_asker=true)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete All Questions",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/questions",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"questions"
+							]
+						},
+						"description": "Delete all my questions (Askers only - is_asker=true)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Question Views",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/questions/:id/views",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"questions",
+								":id",
+								"views"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Get who viewed my question (Askers only - is_asker=true)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Questions - Responder (is_asker=false)",
+			"item": [
+				{
+					"name": "Get Nearby Questions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/questions/nearby/all",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"questions",
+								"nearby",
+								"all"
+							]
+						},
+						"description": "Get all questions from nearby askers (Responders only - is_asker=false, within 1km)"
+					},
+					"response": []
+				},
+				{
+					"name": "View Question (Auto-record)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/questions/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"questions",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "View question details (auto-records view for responders - is_asker=false)"
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "auth_token",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
