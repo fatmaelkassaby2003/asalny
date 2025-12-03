@@ -4,7 +4,10 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Locations\LocationController;
 use App\Http\Controllers\Api\Locations\QuestionController;
-use App\Http\Controllers\Api\Offers\{OffersController, OrderController};
+use App\Http\Controllers\Api\Offers\OfferController;
+use App\Http\Controllers\Api\Offers\OrderController;
+use App\Http\Controllers\Api\Offers\ExtensionController;
+use App\Http\Controllers\Api\Wallet\WalletController;
 
 // Routes عامة
 Route::post('/register', [AuthController::class, 'register']);
@@ -18,6 +21,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout-all', [AuthController::class, 'logoutAll']);
     Route::get('/me', [AuthController::class, 'me']);
     Route::put('/update-profile', [AuthController::class, 'updateProfile']);
+    
+    // المحفظة
+    Route::prefix('wallet')->group(function () {
+        Route::get('/balance', [WalletController::class, 'balance']);
+        Route::post('/deposit', [WalletController::class, 'deposit']);
+        Route::post('/withdraw', [WalletController::class, 'withdraw']);
+        Route::get('/transactions', [WalletController::class, 'transactions']);
+    });
     
     // المواقع
     Route::prefix('locations')->group(function () {
@@ -46,21 +57,30 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // العروض
     Route::prefix('offers')->group(function () {
-        Route::get('/my-offers', [OffersController::class, 'myOffers']); // عروضي (للمجيب)
-        Route::post('/questions/{questionId}', [OffersController::class, 'store']); // إضافة عرض
-        Route::get('/questions/{questionId}', [OffersController::class, 'getQuestionOffers']); // عروض سؤال
-        Route::get('/{offerId}', [OffersController::class, 'show']); // تفاصيل عرض
-        Route::put('/{offerId}', [OffersController::class, 'update']); // تحديث عرض
-        Route::delete('/{offerId}', [OffersController::class, 'destroy']); // حذف عرض
-        Route::post('/accept', [OffersController::class, 'accept']); // قبول عرض
-        Route::post('/reject', [OffersController::class, 'reject']); // رفض عرض
+        Route::get('/my-offers', [OfferController::class, 'myOffers']);
+        Route::post('/questions/{questionId}', [OfferController::class, 'store']);
+        Route::get('/questions/{questionId}', [OfferController::class, 'getQuestionOffers']);
+        Route::get('/{offerId}', [OfferController::class, 'show']);
+        Route::put('/{offerId}', [OfferController::class, 'update']);
+        Route::delete('/{offerId}', [OfferController::class, 'destroy']);
+        Route::post('/accept', [OfferController::class, 'accept']);
+        Route::post('/reject', [OfferController::class, 'reject']);
     });
 
     // الطلبات
     Route::prefix('orders')->group(function () {
-        Route::get('/answerer', [OrderController::class, 'answererOrders']); // طلبات المجيب
-        Route::post('/{orderId}/answer', [OrderController::class, 'answerOrder']); // الإجابة على طلب
-        Route::post('/{orderId}/cancel', [OrderController::class, 'cancelOrder']); // إلغاء طلب
-        Route::get('/asker/questions/{questionId}', [OrderController::class, 'showQuestionWithStatus']); // سؤال مع حالته
+        Route::get('/answerer', [OrderController::class, 'answererOrders']);
+        Route::post('/{orderId}/answer', [OrderController::class, 'answerOrder']);
+        Route::post('/{orderId}/cancel', [OrderController::class, 'cancelOrder']);
+        Route::get('/asker/questions', [OrderController::class, 'askerQuestions']);
+        Route::get('/asker/questions/{questionId}', [OrderController::class, 'showQuestionWithStatus']);
+    });
+
+    // طلبات التمديد
+    Route::prefix('extensions')->group(function () {
+        Route::post('/orders/{orderId}', [ExtensionController::class, 'requestExtension']); // طلب تمديد
+        Route::get('/asker', [ExtensionController::class, 'askerExtensionRequests']); // طلبات السائل
+        Route::post('/{extensionId}/accept', [ExtensionController::class, 'acceptExtension']); // قبول
+        Route::post('/{extensionId}/reject', [ExtensionController::class, 'rejectExtension']); // رفض
     });
 });

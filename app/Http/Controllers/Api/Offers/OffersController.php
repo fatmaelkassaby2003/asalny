@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 
-class OffersController extends Controller
+class OfferController extends Controller
 {
     /**
      * إضافة عرض على سؤال (للمجيبين فقط)
