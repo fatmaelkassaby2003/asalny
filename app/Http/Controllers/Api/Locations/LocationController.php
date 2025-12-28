@@ -151,12 +151,20 @@ class LocationController extends Controller
      * تعيين موقع كموقع حالي
      * 
      * @param Request $request
-     * @param int $id
      * @return JsonResponse
      */
-    public function setDefault(Request $request, $id): JsonResponse
+    public function setDefault(Request $request): JsonResponse
     {
         try {
+            $id = $request->input('id') ?? $request->input('location_id');
+            
+            if (!$id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'معرف الموقع مطلوب في body (id أو location_id)',
+                ], 422);
+            }
+
             $user = $request->user();
             $location = $user->locations()->findOrFail($id);
 

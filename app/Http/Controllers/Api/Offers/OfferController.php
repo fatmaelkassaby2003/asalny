@@ -17,7 +17,7 @@ class OfferController extends Controller
     /**
      * إضافة عرض على سؤال (للمجيبين فقط)
      */
-public function store(Request $request, $questionId): JsonResponse
+public function store(Request $request): JsonResponse
 {
     try {
         $answerer = $request->user();
@@ -27,6 +27,16 @@ public function store(Request $request, $questionId): JsonResponse
                 'success' => false,
                 'message' => 'السائلين غير مصرح لهم بإضافة عروض',
             ], 403);
+        }
+
+        // ✅ قراءة question_id من body
+        $questionId = $request->input('question_id');
+        
+        if (!$questionId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'معرف السؤال مطلوب في body (question_id)',
+            ], 422);
         }
 
         $question = UserQuestion::with('location')->find($questionId);
@@ -567,34 +577,44 @@ public function store(Request $request, $questionId): JsonResponse
     }
 
     /**
-     * قبول عرض وإنشاء طلب (للسائل فقط)
+     * معالجة عرض (قبول أو رفض)
      */
-    public function accept(Request $request): JsonResponse
+    public function handleOffer(Request $request): JsonResponse
     {
         try {
             $asker = $request->user();
 
-            $validator = Validator::make($request->all(), [
-                'offer_id' => 'required|exists:question_offers,id',
-            ], [
-                'offer_id.required' => 'معرف العرض مطلوب',
-                'offer_id.exists' => 'العرض غير موجود',
-            ]);
+            // ✅ قراءة البيانات من body
+            $offerId = $request->input('offer_id');
+            $action = $request->input('action'); // accept or reject
 
-            if ($validator->fails()) {
+            if (!$offerId) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'بيانات غير صحيحة',
-                    'errors' => $validator->errors(),
+                    'message' => 'معرف العرض مطلوب في body (offer_id)',
                 ], 422);
             }
 
-            $offer = QuestionOffer::with(['question', 'answerer'])->find($request->offer_id);
+            if (!$action || !in_array($action, ['accept', 'reject'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'نوع الإجراء مطلوب (action: accept أو reject)',
+                ], 422);
+            }
+
+            $offer = QuestionOffer::with(['question', 'answerer'])->find($offerId);
+
+            if (!$offer) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'العرض غير موجود',
+                ], 404);
+            }
 
             if ($offer->asker_id !== $asker->id) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'غير مصرح لك بقبول هذا العرض',
+                    'message' => 'غير مصرح لك بمعالجة هذا العرض',
                 ], 403);
             }
 
@@ -605,119 +625,75 @@ public function store(Request $request, $questionId): JsonResponse
                 ], 400);
             }
 
-            // ✅ قبول العرض
-            $offer->accept();
+            if ($action === 'accept') {
+                // ✅ قبول العرض
+                $offer->accept();
 
-            // ✅ إنشاء طلب (Order)
-            $expiresAt = Carbon::now()->addMinutes($offer->response_time);
-            
-            $order = Order::create([
-                'question_id' => $offer->question_id,
-                'offer_id' => $offer->id,
-                'asker_id' => $asker->id,
-                'answerer_id' => $offer->answerer_id,
-                'price' => $offer->price,
-                'response_time' => $offer->response_time,
-                'status' => 'pending',
-                'expires_at' => $expiresAt,
-            ]);
+                // ✅ إنشاء طلب (Order)
+                $expiresAt = Carbon::now()->addMinutes($offer->response_time);
+                
+                $order = Order::create([
+                    'question_id' => $offer->question_id,
+                    'offer_id' => $offer->id,
+                    'asker_id' => $asker->id,
+                    'answerer_id' => $offer->answerer_id,
+                    'price' => $offer->price,
+                    'response_time' => $offer->response_time,
+                    'status' => 'pending',
+                    'expires_at' => $expiresAt,
+                ]);
 
-            Log::info('✅ تم قبول عرض وإنشاء طلب', [
-                'offer_id' => $offer->id,
-                'order_id' => $order->id,
-                'expires_at' => $expiresAt,
-            ]);
+                Log::info('✅ تم قبول عرض وإنشاء طلب', [
+                    'offer_id' => $offer->id,
+                    'order_id' => $order->id,
+                    'expires_at' => $expiresAt,
+                ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'تم قبول العرض وجدَّد الطلب بنجاح',
-                'data' => [
-                    'order' => [
-                        'id' => $order->id,
-                        'status' => $order->status,
-                        'price' => $order->price,
-                        'held_amount' => $order->held_amount,
-                        'response_time' => $order->response_time,
-                        'expires_at' => $order->expires_at->format('Y-m-d H:i:s'),
-                        'remaining_minutes' => $order->remaining_time,
-                    ],
-                    'answerer' => [
-                        'id' => $offer->answerer->id,
-                        'name' => $offer->answerer->name,
-                        'phone' => $offer->answerer->phone,
+                return response()->json([
+                    'success' => true,
+                    'message' => 'تم قبول العرض وجدَّد الطلب بنجاح',
+                    'data' => [
+                        'order' => [
+                            'id' => $order->id,
+                            'status' => $order->status,
+                            'price' => $order->price,
+                            'held_amount' => $order->held_amount,
+                            'response_time' => $order->response_time,
+                            'expires_at' => $order->expires_at->format('Y-m-d H:i:s'),
+                            'remaining_minutes' => $order->remaining_time,
+                        ],
+                        'answerer' => [
+                            'id' => $offer->answerer->id,
+                            'name' => $offer->answerer->name,
+                            'phone' => $offer->answerer->phone,
+                        ]
                     ]
-                ]
-            ], 200);
+                ], 200);
+            } else {
+                // رفض العرض وحذفه من قاعدة البيانات
+                $offerId = $offer->id;
+                $offer->delete();
+
+                Log::info('✅ تم رفض وحذف العرض', [
+                    'offer_id' => $offerId,
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'تم رفض وحذف العرض',
+                ], 200);
+            }
 
         } catch (\Exception $e) {
-            Log::error('❌ خطأ في قبول العرض', [
+            Log::error('❌ خطأ في معالجة العرض', [
                 'error' => $e->getMessage(),
-                'offer_id' => $request->offer_id ?? null,
+                'offer_id' => $request->input('offer_id'),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'حدث خطأ أثناء قبول العرض',
+                'message' => 'حدث خطأ أثناء معالجة العرض',
                 'error' => config('app.debug') ? $e->getMessage() : null
-            ], 500);
-        }
-    }
-
-    /**
-     * رفض عرض (للسائل فقط)
-     */
-    public function reject(Request $request): JsonResponse
-    {
-        try {
-            $asker = $request->user();
-
-            $validator = Validator::make($request->all(), [
-                'offer_id' => 'required|exists:question_offers,id',
-            ], [
-                'offer_id.required' => 'معرف العرض مطلوب',
-                'offer_id.exists' => 'العرض غير موجود',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'بيانات غير صحيحة',
-                    'errors' => $validator->errors(),
-                ], 422);
-            }
-
-            $offer = QuestionOffer::find($request->offer_id);
-
-            if ($offer->asker_id !== $asker->id) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'غير مصرح لك برفض هذا العرض',
-                ], 403);
-            }
-
-            if ($offer->status !== 'pending') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'العرض تم معالجته بالفعل',
-                ], 400);
-            }
-
-            $offer->reject();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'تم رفض العرض',
-            ], 200);
-
-        } catch (\Exception $e) {
-            Log::error('❌ خطأ في رفض العرض', [
-                'error' => $e->getMessage(),
-                'offer_id' => $request->offer_id ?? null,
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'حدث خطأ أثناء رفض العرض',
             ], 500);
         }
     }

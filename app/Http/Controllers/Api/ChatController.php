@@ -233,10 +233,20 @@ class ChatController extends Controller
     /**
      * إرسال رسالة
      */
-    public function sendMessage(Request $request, $chatId): JsonResponse
+    public function sendMessage(Request $request): JsonResponse
     {
         try {
             $user = $request->user();
+
+            // ✅ قراءة chat_id من body
+            $chatId = $request->input('chat_id');
+            
+            if (!$chatId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'معرف المحادثة مطلوب في body (chat_id)',
+                ], 422);
+            }
 
             $chat = Chat::find($chatId);
 

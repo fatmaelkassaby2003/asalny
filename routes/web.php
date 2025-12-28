@@ -16,3 +16,10 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
+// 🧪 Test Payment Page
+Route::get('/test-payment/{invoice}', function ($invoice) {
+    $amount = request('amount', 100);
+    $userId = request('user_id', 1);
+    return view('test-payment', compact('invoice', 'amount', 'userId'));
+})->name('fawaterak.test.payment');

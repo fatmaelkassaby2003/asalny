@@ -99,10 +99,81 @@ class Order extends Model
     }
 
     /**
-     * إلغاء الطلب
+     * التحقق من إمكانية إلغاء الطلب من قبل السائل
+     * يمكن الإلغاء إذا كان الوقت المتبقي للإجابة أكثر من 5 دقائق
+     */
+    public function canBeCancelledByAsker(): array
+    {
+        // لا يمكن إلغاء طلب غير معلق
+        if ($this->status !== 'pending') {
+            return [
+                'can_cancel' => false,
+                'reason' => 'لا يمكن إلغاء طلب ' . $this->status,
+            ];
+        }
+
+        // حساب الوقت المتبقي للإجابة بالدقائق
+        $remainingMinutes = $this->remaining_time;
+
+        // يمكن الإلغاء فقط إذا كان الباقي أكثر من 5 دقائق
+        if ($remainingMinutes <= 5) {
+            return [
+                'can_cancel' => false,
+                'reason' => 'لا يمكن إلغاء الطلب. يجب أن يكون الوقت المتبقي للإجابة أكثر من 5 دقائق',
+                'remaining_minutes' => $remainingMinutes,
+            ];
+        }
+
+        return [
+            'can_cancel' => true,
+            'remaining_minutes' => $remainingMinutes,
+        ];
+    }
+
+    /**
+     * إلغاء الطلب من قبل السائل مع إرجاع الأموال
+     */
+    public function cancelByAsker()
+    {
+        $walletService = app(\App\Services\WalletService::class);
+        
+        // التحقق من وجود مبلغ محجوز
+        if ($this->held_amount > 0) {
+            // إرجاع المبلغ المحجوز
+            $walletService->releaseHeldAmount($this->asker, $this);
+        }
+
+        // إلغاء الطلب
+        $this->update([
+            'status' => 'cancelled',
+            'cancelled_at' => now(),
+        ]);
+    }
+
+    /**
+     * إلغاء الطلب (الطريقة القديمة)
      */
     public function cancel()
     {
+        $this->update([
+            'status' => 'cancelled',
+            'cancelled_at' => now(),
+        ]);
+    }
+
+    /**
+     * إلغاء الطلب وإرجاع المبلغ المحجوز
+     */
+    public function cancelAndRefund()
+    {
+        $walletService = app(\App\Services\WalletService::class);
+        
+        // إرجاع المبلغ المحجوز إن وجد
+        if ($this->held_amount > 0) {
+            $walletService->releaseHeldAmount($this->asker, $this);
+        }
+
+        // إلغاء الطلب
         $this->update([
             'status' => 'cancelled',
             'cancelled_at' => now(),

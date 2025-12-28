@@ -188,4 +188,158 @@ class WalletController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * إيداع عبر Fawaterak - إنشاء invoice
+     */
+    public function depositViaFawaterak(Request $request): JsonResponse
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'amount' => 'required|numeric|min:10|max:10000',
+            ], [
+                'amount.required' => 'المبلغ مطلوب',
+                'amount.numeric' => 'المبلغ يجب أن يكون رقم',
+                'amount.min' => 'الحد الأدنى للإيداع هو 10',
+                'amount.max' => 'الحد الأقصى للإيداع هو 10000',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'بيانات غير صحيحة',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+
+            $user = $request->user();
+            $fawaterakService = app(\App\Services\FawaterakService::class);
+
+            // إنشاء فاتورة للإيداع
+            $result = $fawaterakService->createDepositInvoice($user, $request->amount);
+
+            if (!$result['success']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'فشل إنشاء فاتورة الإيداع',
+                    'error' => $result['message'] ?? 'حدث خطأ',
+                    'details' => $result['error_details'] ?? null,
+                ], 500);
+            }
+
+            Log::info('✅ تم إنشاء فاتورة إيداع', [
+                'user_id' => $user->id,
+                'amount' => $request->amount,
+                'invoice_id' => $result['data']['invoice_id'],
+            ]);
+
+            // إذا كان الطلب من المتصفح، اعرض صفحة redirect
+            if ($request->header('Accept') && str_contains($request->header('Accept'), 'text/html')) {
+                $paymentUrl = $result['data']['url'];
+                return response()->view('payment-redirect', [
+                    'payment_url' => $paymentUrl,
+                    'amount' => $request->amount,
+                    'invoice_id' => $result['data']['invoice_id']
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'تم إنشاء رابط الدفع بنجاح',
+                'data' => [
+                    'payment_url' => $result['data']['url'],
+                    'invoice_id' => $result['data']['invoice_id'],
+                    'amount' => $request->amount,
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('❌ خطأ في إنشاء فاتورة Fawaterak', [
+                'error' => $e->getMessage(),
+                'user_id' => $request->user()->id ?? null,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'حدث خطأ أثناء إنشاء رابط الدفع',
+            ], 500);
+        }
+    }
+
+    /**
+     * طلب سحب عبر Fawaterak (يتطلب موافقة إدارية)
+     */
+    public function withdrawViaFawaterak(Request $request): JsonResponse
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'amount' => 'required|numeric|min:10',
+                'bank_account' => 'required|string',
+            ], [
+                'amount.required' => 'المبلغ مطلوب',
+                'amount.numeric' => 'المبلغ يجب أن يكون رقم',
+                'amount.min' => 'الحد الأدنى للسحب هو 10',
+                'bank_account.required' => 'رقم الحساب البنكي مطلوب',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'بيانات غير صحيحة',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+
+            $user = $request->user();
+            $currentBalance = $this->walletService->getBalance($user);
+
+            if ($currentBalance < $request->amount) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'رصيدك غير كافي',
+                    'data' => [
+                        'current_balance' => $currentBalance,
+                        'requested_amount' => $request->amount,
+                    ]
+                ], 400);
+            }
+
+            // سحب المبلغ من المحفظة (سيتم تحويله لاحقاً)
+            $transaction = $this->walletService->withdraw(
+                $user,
+                $request->amount,
+                "طلب سحب إلى {$request->bank_account}"
+            );
+
+            Log::info('✅ تم إنشاء طلب سحب', [
+                'user_id' => $user->id,
+                'amount' => $request->amount,
+                'bank_account' => $request->bank_account,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'تم إنشاء طلب السحب بنجاح. سيتم تحويل المبلغ خلال 1-3 أيام عمل',
+                'data' => [
+                    'transaction' => [
+                        'id' => $transaction->id,
+                        'amount' => $transaction->amount,
+                        'balance_after' => $transaction->balance_after,
+                        'status' => 'pending',
+                    ]
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('❌ خطأ في طلب السحب', [
+                'error' => $e->getMessage(),
+                'user_id' => $request->user()->id,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        }
+    }
 }

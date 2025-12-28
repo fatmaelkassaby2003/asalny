@@ -15,10 +15,20 @@ class ExtensionController extends Controller
     /**
      * طلب تمديد مدة الطلب (للمجيب)
      */
-    public function requestExtension(Request $request, $orderId): JsonResponse
+    public function requestExtension(Request $request): JsonResponse
     {
         try {
             $answerer = $request->user();
+
+            // ✅ قراءة order_id من body
+            $orderId = $request->input('order_id');
+            
+            if (!$orderId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'معرف الطلب مطلوب في body (order_id)',
+                ], 422);
+            }
 
             $order = Order::with('pendingExtensionRequest')->find($orderId);
 
@@ -171,12 +181,30 @@ class ExtensionController extends Controller
     }
 
     /**
-     * قبول طلب تمديد (للسائل)
+     * معالجة طلب تمديد (قبول أو رفض)
      */
-    public function acceptExtension(Request $request, $extensionId): JsonResponse
+    public function handleExtension(Request $request): JsonResponse
     {
         try {
             $asker = $request->user();
+
+            // ✅ قراءة البيانات من body
+            $extensionId = $request->input('extension_id');
+            $action = $request->input('action'); // accept or reject
+            
+            if (!$extensionId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'معرف طلب التمديد مطلوب في body (extension_id)',
+                ], 422);
+            }
+
+            if (!$action || !in_array($action, ['accept', 'reject'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'نوع الإجراء مطلوب (action: accept أو reject)',
+                ], 422);
+            }
 
             $extensionRequest = ExtensionRequest::with('order')->find($extensionId);
 
@@ -190,7 +218,7 @@ class ExtensionController extends Controller
             if ($extensionRequest->asker_id !== $asker->id) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'غير مصرح لك بقبول هذا الطلب',
+                    'message' => 'غير مصرح لك بمعالجة هذا الطلب',
                 ], 403);
             }
 
@@ -201,97 +229,85 @@ class ExtensionController extends Controller
                 ], 400);
             }
 
-            $extensionRequest->accept();
+            if ($action === 'accept') {
+                // قبول الطلب وتمديد الوقت
+                $extensionRequest->accept();
 
-            Log::info('✅ تم قبول طلب التمديد', [
-                'extension_request_id' => $extensionRequest->id,
-                'order_id' => $extensionRequest->order_id,
-                'new_expires_at' => $extensionRequest->order->fresh()->expires_at,
-            ]);
+                Log::info('✅ تم قبول طلب التمديد', [
+                    'extension_request_id' => $extensionRequest->id,
+                    'order_id' => $extensionRequest->order_id,
+                    'new_expires_at' => $extensionRequest->order->fresh()->expires_at,
+                ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'تم قبول طلب التمديد بنجاح',
-                'data' => [
-                    'order' => [
-                        'id' => $extensionRequest->order->id,
-                        'new_expires_at' => $extensionRequest->order->fresh()->expires_at->format('Y-m-d H:i:s'),
-                        'remaining_minutes' => $extensionRequest->order->fresh()->remaining_time,
+                return response()->json([
+                    'success' => true,
+                    'message' => 'تم قبول طلب التمديد بنجاح',
+                    'data' => [
+                        'order' => [
+                            'id' => $extensionRequest->order->id,
+                            'new_expires_at' => $extensionRequest->order->fresh()->expires_at->format('Y-m-d H:i:s'),
+                            'remaining_minutes' => $extensionRequest->order->fresh()->remaining_time,
+                        ]
                     ]
-                ]
-            ], 200);
+                ], 200);
+            } else {
+                // رفض الطلب وإلغاء Order وإرجاع المبلغ
+                $extensionRequest->reject();
+
+                // ✅ جلب العروض المتاحة (pending) على السؤال
+                $questionId = $extensionRequest->order->question_id;
+                $availableOffers = QuestionOffer::with(['answerer', 'location'])
+                    ->where('question_id', $questionId)
+                    ->where('status', 'pending')
+                    ->orderBy('created_at', 'desc')
+                    ->get();
+
+                Log::info('✅ تم رفض طلب التمديد وإلغاء الطلب', [
+                    'extension_request_id' => $extensionRequest->id,
+                    'order_id' => $extensionRequest->order_id,
+                    'available_offers_count' => $availableOffers->count(),
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'تم رفض طلب التمديد وإلغاء الطلب وإرجاع المبلغ. يمكنك اختيار عرض آخر',
+                    'data' => [
+                        'wallet' => [
+                            'balance' => $asker->fresh()->wallet_balance,
+                        ],
+                        'available_offers' => $availableOffers->map(function ($offer) {
+                            return [
+                                'id' => $offer->id,
+                                'price' => $offer->price,
+                                'response_time' => $offer->response_time,
+                                'note' => $offer->note,
+                                'answerer' => [
+                                    'id' => $offer->answerer->id,
+                                    'name' => $offer->answerer->name,
+                                    'phone' => $offer->answerer->phone,
+                                ],
+                                'location' => $offer->location ? [
+                                    'id' => $offer->location->id,
+                                    'latitude' => $offer->location->latitude,
+                                    'longitude' => $offer->location->longitude,
+                                ] : null,
+                                'created_at' => $offer->created_at->format('Y-m-d H:i:s'),
+                            ];
+                        }),
+                        'total_offers' => $availableOffers->count(),
+                    ]
+                ], 200);
+            }
 
         } catch (\Exception $e) {
-            Log::error('❌ خطأ في قبول طلب التمديد', [
+            Log::error('❌ خطأ في معالجة طلب التمديد', [
                 'error' => $e->getMessage(),
-                'extension_id' => $extensionId,
+                'extension_id' => $request->input('extension_id'),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'حدث خطأ أثناء قبول طلب التمديد',
-            ], 500);
-        }
-    }
-
-    /**
-     * رفض طلب تمديد (للسائل)
-     */
-    public function rejectExtension(Request $request, $extensionId): JsonResponse
-    {
-        try {
-            $asker = $request->user();
-
-            $extensionRequest = ExtensionRequest::with('order')->find($extensionId);
-
-            if (!$extensionRequest) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'طلب التمديد غير موجود',
-                ], 404);
-            }
-
-            if ($extensionRequest->asker_id !== $asker->id) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'غير مصرح لك برفض هذا الطلب',
-                ], 403);
-            }
-
-            if ($extensionRequest->status !== 'pending') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'الطلب تم معالجته بالفعل',
-                ], 400);
-            }
-
-            // رفض الطلب وإلغاء Order وإرجاع المبلغ
-            $extensionRequest->reject();
-
-            Log::info('✅ تم رفض طلب التمديد وإلغاء الطلب', [
-                'extension_request_id' => $extensionRequest->id,
-                'order_id' => $extensionRequest->order_id,
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'تم رفض طلب التمديد وإلغاء الطلب وإرجاع المبلغ',
-                'data' => [
-                    'wallet' => [
-                        'balance' => $asker->fresh()->wallet_balance,
-                    ]
-                ]
-            ], 200);
-
-        } catch (\Exception $e) {
-            Log::error('❌ خطأ في رفض طلب التمديد', [
-                'error' => $e->getMessage(),
-                'extension_id' => $extensionId,
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'حدث خطأ أثناء رفض طلب التمديد',
+                'message' => 'حدث خطأ أثناء معالجة طلب التمديد',
             ], 500);
         }
     }
