@@ -61,7 +61,7 @@ class ChatController extends Controller
                     'chat' => [
                         'id' => $chat->id,
                         'order_id' => $chat->order_id,
-                        'last_message_at' => $chat->last_message_at?->format('Y-m-d H:i:s'),
+                        'last_message_at' => $chat->last_message_at ? \Carbon\Carbon::parse($chat->last_message_at)->format('Y-m-d H:i:s') : null,
                         'unread_count' => $chat->unreadCountFor($user->id),
                         'other_participant' => [
                             'id' => $otherParticipant->id,
@@ -120,7 +120,7 @@ class ChatController extends Controller
                             'created_at' => $lastMessage->created_at->format('Y-m-d H:i:s'),
                         ] : null,
                         'unread_count' => $chat->unreadCountFor($user->id),
-                        'last_message_at' => $chat->last_message_at?->format('Y-m-d H:i:s'),
+                        'last_message_at' => $chat->last_message_at ? \Carbon\Carbon::parse($chat->last_message_at)->format('Y-m-d H:i:s') : null,
                         'created_at' => $chat->created_at->format('Y-m-d H:i:s'),
                     ];
                 });
