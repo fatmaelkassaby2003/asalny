@@ -27,135 +27,79 @@ class AuthController extends Controller
     }
 
     /**
-     * تسجيل مستخدم جديد (بدون باسورد)
-     * 
-     * @param RegisterRequest $request
-     * @return JsonResponse
+     * تسجيل مستخدم جديد
      */
     public function register(RegisterRequest $request): JsonResponse
     {
         try {
-            // ✅ تحديد الـ description الافتراضي حسب النوع
-            $defaultDescription = $request->is_asker ?? true 
-                ? 'سائل' 
-                : 'متخصص في الردود الميدانية للمؤسسات الحكومية بالرياض.';
+            $defaultDescription = $this->getDefaultDescription($request->is_asker ?? true);
 
-            // إنشاء المستخدم
             $user = User::create([
                 'name' => $request->name,
                 'phone' => $request->phone,
                 'email' => $request->email,
                 'gender' => $request->gender,
                 'is_asker' => $request->is_asker ?? true,
-                'description' => $request->description ?? $defaultDescription, // ✅ description
+                'description' => $request->description ?? $defaultDescription,
                 'is_active' => true,
             ]);
 
-            // إنشاء توكن
             $token = $user->createToken('auth_token')->plainTextToken;
 
-            Log::info('✅ New user registered: ' . $user->phone);
+            Log::info('✅ New user registered', ['user_id' => $user->id, 'phone' => $user->phone]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'تم إنشاء الحساب بنجاح',
-                'data' => [
-                    'user' => [
-                        'id' => $user->id,
-                        'name' => $user->name,
-                        'phone' => $user->phone,
-                        'email' => $user->email,
-                        'gender' => $user->gender,
-                        'is_asker' => $user->is_asker,
-                        'description' => $user->description, // ✅
-                        'is_active' => $user->is_active,
-                        'created_at' => $user->created_at->format('Y-m-d H:i:s'),
-                    ],
+            return $this->successResponse(
+                'تم إنشاء الحساب بنجاح',
+                [
+                    'user' => $this->formatUserData($user),
                     'token' => $token,
-                ]
-            ], 201);
+                ],
+                201
+            );
         } catch (\Exception $e) {
-            Log::error('❌ Registration failed: ' . $e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'message' => 'حدث خطأ أثناء إنشاء الحساب',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
-            ], 500);
+            Log::error('❌ Registration failed', ['error' => $e->getMessage()]);
+            return $this->errorResponse('حدث خطأ أثناء إنشاء الحساب', 500);
         }
     }
 
     /**
-     * إرسال كود التحقق عبر Twilio
+     * إرسال كود التحقق
      */
     public function sendVerificationCode(SendCodeRequest $request): JsonResponse
     {
         try {
             $phone = $request->phone;
-            $code = str_pad(random_int(0, 99999), 5, '0', STR_PAD_LEFT);
-
-            $deleted = VerificationCode::where('phone', $phone)->delete();
             
-            if ($deleted > 0) {
-                Log::info("🗑️ Deleted {$deleted} old verification codes for: {$phone}");
-            }
+            // توليد كود عشوائي
+            $code = $this->generateVerificationCode();
+            
+            // حذف الأكواد القديمة
+            $this->deleteOldCodes($phone);
+            
+            // حفظ الكود الجديد
+            $verificationCode = $this->createVerificationCode($phone, $code);
+            
+            // إرسال عبر Twilio
+            $twilioSent = $this->sendViaTwilio($phone);
 
-            $verificationCode = VerificationCode::create([
+            Log::info('💾 Verification code created', [
                 'phone' => $phone,
-                'code' => $code,
-                'expires_at' => Carbon::now()->addMinute(1),
-                'is_used' => false,
-            ]);
-
-            Log::info("💾 Verification code saved to database", [
-                'phone' => $phone,
-                'code' => $code,
                 'expires_at' => $verificationCode->expires_at->format('Y-m-d H:i:s'),
             ]);
 
-            $twilioSent = false;
-            try {
-                $verifySid = config('services.twilio.verify_sid');
-
-                if ($verifySid) {
-                    $this->twilio->verify->v2->services($verifySid)
-                        ->verifications
-                        ->create($phone, "sms");
-
-                    $twilioSent = true;
-                    Log::info("📱 Verification code sent via Twilio for: {$phone}");
-                } else {
-                    Log::warning('⚠️ Twilio Verify SID is missing');
-                }
-            } catch (\Exception $e) {
-                Log::warning('⚠️ Twilio sending failed', [
+            return $this->successResponse(
+                'تم إرسال كود التحقق بنجاح',
+                [
                     'phone' => $phone,
-                    'error' => $e->getMessage()
-                ]);
-            }
-
-            return response()->json([
-                'success' => true,
-                'message' => 'تم إرسال كود التحقق بنجاح. الكود صالح لمدة دقيقة واحدة فقط',
-                'data' => [
-                    'phone' => $phone,
+                    'code' => $code,
                     'expires_in_seconds' => 60,
-                    'code' => config('app.debug') ? $code : null,
-                    'twilio_sent' => $twilioSent
+                    'twilio_sent' => $twilioSent,
                 ]
-            ], 200);
+            );
 
         } catch (\Exception $e) {
-            Log::error('❌ Error sending verification code', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'حدث خطأ أثناء إرسال كود التحقق',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
-            ], 500);
+            Log::error('❌ Error sending verification code', ['error' => $e->getMessage()]);
+            return $this->errorResponse('حدث خطأ أثناء إرسال كود التحقق', 500);
         }
     }
 
@@ -166,92 +110,60 @@ class AuthController extends Controller
     {
         try {
             $code = $request->code;
+            $phone = $request->phone;
 
-            Log::info('🔍 Verifying code', ['code' => $code]);
+            Log::info('🔍 Verifying code', ['code' => $code, 'phone' => $phone]);
 
+            // البحث عن الكود الصالح لهذا الرقم
             $verificationCode = VerificationCode::where('code', $code)
+                ->where('phone', $phone)
                 ->where('is_used', false)
                 ->where('expires_at', '>', Carbon::now())
                 ->first();
 
             if (!$verificationCode) {
-                Log::warning('❌ Invalid or expired code', ['code' => $code]);
-
-                if (config('app.debug')) {
-                    $availableCodes = VerificationCode::where('is_used', false)
-                        ->orderBy('created_at', 'desc')
-                        ->limit(5)
-                        ->get(['code', 'phone', 'expires_at', 'created_at']);
-                    Log::info('📋 Available codes:', $availableCodes->toArray());
-                }
-
-                return response()->json([
-                    'success' => false,
-                    'message' => 'كود التحقق غير صحيح أو منتهي الصلاحية',
-                ], 401);
+                Log::warning('❌ Invalid or expired code', ['code' => $code, 'phone' => $phone]);
+                return $this->errorResponse('كود التحقق غير صحيح أو منتهي الصلاحية', 401);
             }
 
-            $phone = $verificationCode->phone;
-            
-            Log::info('✅ Code verified successfully', [
-                'code' => $code,
-                'phone' => $phone
-            ]);
-
+            // تعليم الكود كمستخدم
             $verificationCode->update(['is_used' => true]);
-            Log::info('🔒 Code marked as used');
+            Log::info('✅ Code verified', ['code' => $code, 'phone' => $phone]);
 
+            // البحث عن المستخدم
             $user = User::where('phone', $phone)->first();
 
             if (!$user) {
-                Log::error('❌ User not found for phone: ' . $phone);
-
-                return response()->json([
-                    'success' => false,
-                    'message' => 'المستخدم غير موجود',
-                ], 404);
+                Log::error('❌ User not found', ['phone' => $phone]);
+                return $this->errorResponse('المستخدم غير موجود', 404);
             }
 
-            $deletedTokens = $user->tokens()->count();
+            // حذف التوكنات القديمة
+            $deletedCount = $user->tokens()->count();
             $user->tokens()->delete();
 
-            if ($deletedTokens > 0) {
-                Log::info("🗑️ Deleted {$deletedTokens} old tokens");
+            if ($deletedCount > 0) {
+                Log::info('🗑️ Old tokens deleted', [
+                    'user_id' => $user->id,
+                    'count' => $deletedCount
+                ]);
             }
 
+            // إنشاء توكن جديد
             $token = $user->createToken('auth_token')->plainTextToken;
-            Log::info('🔑 New authentication token created for user: ' . $user->id);
+            Log::info('🔑 New token created', ['user_id' => $user->id]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'تم تسجيل الدخول بنجاح',
-                'data' => [
-                    'user' => [
-                        'id' => $user->id,
-                        'name' => $user->name,
-                        'phone' => $user->phone,
-                        'email' => $user->email,
-                        'gender' => $user->gender,
-                        'is_asker' => $user->is_asker,
-                        'description' => $user->description, // ✅
-                        'is_active' => $user->is_active,
-                        'created_at' => $user->created_at->format('Y-m-d H:i:s'),
-                    ],
+            return $this->successResponse(
+                'تم تسجيل الدخول بنجاح',
+                [
+                    'user' => $this->formatUserData($user),
                     'token' => $token,
                 ]
-            ], 200);
+            );
 
         } catch (\Exception $e) {
-            Log::error('❌ Error during login', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'حدث خطأ أثناء تسجيل الدخول',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
-            ], 500);
+            Log::error('❌ Error during login', ['error' => $e->getMessage()]);
+            return $this->errorResponse('حدث خطأ أثناء تسجيل الدخول', 500);
         }
     }
 
@@ -264,20 +176,12 @@ class AuthController extends Controller
             $user = $request->user();
             $request->user()->currentAccessToken()->delete();
 
-            Log::info('👋 User logged out: ' . $user->id);
+            Log::info('👋 User logged out', ['user_id' => $user->id]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'تم تسجيل الخروج بنجاح',
-            ], 200);
+            return $this->successResponse('تم تسجيل الخروج بنجاح');
         } catch (\Exception $e) {
-            Log::error('❌ Logout failed: ' . $e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'message' => 'حدث خطأ أثناء تسجيل الخروج',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
-            ], 500);
+            Log::error('❌ Logout failed', ['error' => $e->getMessage()]);
+            return $this->errorResponse('حدث خطأ أثناء تسجيل الخروج', 500);
         }
     }
 
@@ -291,20 +195,15 @@ class AuthController extends Controller
             $deletedCount = $user->tokens()->count();
             $user->tokens()->delete();
 
-            Log::info("👋 User logged out from all devices ({$deletedCount} tokens): " . $user->id);
+            Log::info('👋 User logged out from all devices', [
+                'user_id' => $user->id,
+                'tokens_deleted' => $deletedCount
+            ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'تم تسجيل الخروج من جميع الأجهزة بنجاح',
-            ], 200);
+            return $this->successResponse('تم تسجيل الخروج من جميع الأجهزة بنجاح');
         } catch (\Exception $e) {
-            Log::error('❌ Logout all failed: ' . $e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'message' => 'حدث خطأ أثناء تسجيل الخروج',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
-            ], 500);
+            Log::error('❌ Logout all failed', ['error' => $e->getMessage()]);
+            return $this->errorResponse('حدث خطأ أثناء تسجيل الخروج', 500);
         }
     }
 
@@ -313,43 +212,27 @@ class AuthController extends Controller
      */
     public function me(Request $request): JsonResponse
     {
-        $user = $request->user();
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'phone' => $user->phone,
-                    'email' => $user->email,
-                    'gender' => $user->gender,
-                    'is_asker' => $user->is_asker,
-                    'description' => $user->description, // ✅
-                    'is_active' => $user->is_active,
-                    'created_at' => $user->created_at->format('Y-m-d H:i:s'),
-                ]
-            ]
-        ], 200);
+        return $this->successResponse(
+            null,
+            ['user' => $this->formatUserData($request->user())]
+        );
     }
 
     /**
      * تحديث بيانات الملف الشخصي
-     * ✅ يشمل تحديث is_asker و description
      */
     public function updateProfile(Request $request): JsonResponse
     {
         try {
             $user = $request->user();
             
-            // التحقق من البيانات
             $validated = $request->validate([
                 'name' => 'nullable|string|max:255',
                 'email' => 'nullable|email|unique:users,email,' . $user->id,
                 'gender' => 'nullable|in:male,female',
                 'phone' => 'nullable|string|unique:users,phone,' . $user->id,
-                'is_asker' => 'nullable|boolean', // ✅ إضافة is_asker
-                'description' => 'nullable|string|max:1000', // ✅ إضافة description
+                'is_asker' => 'nullable|boolean',
+                'description' => 'nullable|string|max:1000',
             ], [
                 'name.max' => 'الاسم يجب ألا يتجاوز 255 حرف',
                 'email.email' => 'البريد الإلكتروني غير صالح',
@@ -360,14 +243,12 @@ class AuthController extends Controller
                 'description.max' => 'الوصف يجب ألا يتجاوز 1000 حرف',
             ]);
 
-            // ✅ إذا تم تغيير is_asker، حدث الـ description تلقائياً (إذا لم يتم إرساله يدوياً)
+            // تحديث description تلقائياً عند تغيير is_asker
             if (isset($validated['is_asker']) && $validated['is_asker'] !== $user->is_asker) {
                 if (!isset($validated['description'])) {
-                    $validated['description'] = $validated['is_asker'] 
-                        ? 'سائل' 
-                        : 'متخصص في الردود الميدانية للمؤسسات الحكومية بالرياض.';
+                    $validated['description'] = $this->getDefaultDescription($validated['is_asker']);
                     
-                    Log::info('🔄 Description auto-updated due to is_asker change', [
+                    Log::info('🔄 Description auto-updated', [
                         'user_id' => $user->id,
                         'new_is_asker' => $validated['is_asker'],
                         'new_description' => $validated['description']
@@ -375,52 +256,24 @@ class AuthController extends Controller
                 }
             }
 
-            // تحديث البيانات
-            if (isset($validated['name'])) {
-                $user->name = $validated['name'];
-            }
+            // تحديث البيانات - استخدام array_filter ولكن مع ARRAY_FILTER_USE_BOTH للحفاظ على القيم المهمة
+            $dataToUpdate = array_filter($validated, function($value, $key) {
+                // السماح بتحديث description حتى لو كان فارغاً عند تغيير is_asker
+                if ($key === 'description') {
+                    return true;
+                }
+                // باقي الحقول: فقط القيم غير الفارغة
+                return !is_null($value) && $value !== '';
+            }, ARRAY_FILTER_USE_BOTH);
             
-            if (isset($validated['email'])) {
-                $user->email = $validated['email'];
-            }
-            
-            if (isset($validated['gender'])) {
-                $user->gender = $validated['gender'];
-            }
-            
-            if (isset($validated['phone'])) {
-                $user->phone = $validated['phone'];
-            }
+            $user->update($dataToUpdate);
 
-            if (isset($validated['is_asker'])) {
-                $user->is_asker = $validated['is_asker'];
-            }
+            Log::info('✅ Profile updated', ['user_id' => $user->id]);
 
-            if (isset($validated['description'])) {
-                $user->description = $validated['description'];
-            }
-
-            $user->save();
-
-            Log::info('✅ Profile updated successfully for user: ' . $user->id);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'تم تحديث الملف الشخصي بنجاح',
-                'data' => [
-                    'user' => [
-                        'id' => $user->id,
-                        'name' => $user->name,
-                        'phone' => $user->phone,
-                        'email' => $user->email,
-                        'gender' => $user->gender,
-                        'is_asker' => $user->is_asker,
-                        'description' => $user->description, // ✅
-                        'is_active' => $user->is_active,
-                        'updated_at' => $user->updated_at->format('Y-m-d H:i:s'),
-                    ]
-                ]
-            ], 200);
+            return $this->successResponse(
+                'تم تحديث الملف الشخصي بنجاح',
+                ['user' => $this->formatUserData($user->fresh())]
+            );
 
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
@@ -430,13 +283,143 @@ class AuthController extends Controller
             ], 422);
             
         } catch (\Exception $e) {
-            Log::error('❌ Error updating profile: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'حدث خطأ أثناء تحديث الملف الشخصي',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
-            ], 500);
+            Log::error('❌ Error updating profile', ['error' => $e->getMessage()]);
+            return $this->errorResponse('حدث خطأ أثناء تحديث الملف الشخصي', 500);
         }
+    }
+
+    // ==================== Helper Methods ====================
+
+    /**
+     * تنسيق بيانات المستخدم للـ Response
+     */
+    private function formatUserData(User $user): array
+    {
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'phone' => $user->phone,
+            'email' => $user->email,
+            'gender' => $user->gender,
+            'is_asker' => $user->is_asker,
+            'description' => $user->description,
+            'is_active' => $user->is_active,
+            'created_at' => $user->created_at->format('Y-m-d H:i:s'),
+        ];
+    }
+
+    /**
+     * الحصول على Description الافتراضي
+     */
+    private function getDefaultDescription(bool $isAsker): string
+    {
+        return $isAsker ? 'سائل' : 'مجيب';
+    }
+
+    /**
+     * توليد كود تحقق عشوائي
+     */
+    private function generateVerificationCode(): string
+    {
+        return str_pad(random_int(0, 99999), 5, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * حذف الأكواد القديمة
+     */
+    private function deleteOldCodes(string $phone): void
+    {
+        $deleted = VerificationCode::where('phone', $phone)->delete();
+        
+        if ($deleted > 0) {
+            Log::info('🗑️ Old codes deleted', ['phone' => $phone, 'count' => $deleted]);
+        }
+    }
+
+    /**
+     * إنشاء كود تحقق جديد
+     */
+    private function createVerificationCode(string $phone, string $code): VerificationCode
+    {
+        return VerificationCode::create([
+            'phone' => $phone,
+            'code' => $code,
+            'expires_at' => Carbon::now()->addMinute(1),
+            'is_used' => false,
+        ]);
+    }
+
+    /**
+     * إرسال الكود عبر Twilio
+     */
+    private function sendViaTwilio(string $phone): bool
+    {
+        try {
+            $verifySid = config('services.twilio.verify_sid');
+
+            if (!$verifySid) {
+                Log::warning('⚠️ Twilio Verify SID is missing');
+                return false;
+            }
+
+            $this->twilio->verify->v2->services($verifySid)
+                ->verifications
+                ->create($phone, "sms");
+
+            Log::info('📱 Verification code sent via Twilio', ['phone' => $phone]);
+            return true;
+
+        } catch (\Exception $e) {
+            Log::warning('⚠️ Twilio sending failed', [
+                'phone' => $phone,
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Success Response
+     */
+    private function successResponse(
+        ?string $message = null, 
+        ?array $data = null, 
+        int $statusCode = 200
+    ): JsonResponse {
+        $response = ['success' => true];
+        
+        if ($message) {
+            $response['message'] = $message;
+        }
+        
+        if ($data) {
+            $response['data'] = $data;
+        }
+        
+        return response()->json($response, $statusCode);
+    }
+
+    /**
+     * Error Response
+     */
+    private function errorResponse(
+        string $message, 
+        int $statusCode = 400,
+        ?array $errors = null
+    ): JsonResponse {
+        $response = [
+            'success' => false,
+            'message' => $message,
+        ];
+        
+        if ($errors) {
+            $response['errors'] = $errors;
+        }
+        
+        if (config('app.debug') && $statusCode >= 500) {
+            $response['debug'] = true;
+        }
+        
+        return response()->json($response, $statusCode);
     }
 }

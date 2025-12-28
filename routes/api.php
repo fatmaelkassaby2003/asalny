@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\Offers\OfferController;
 use App\Http\Controllers\Api\Offers\OrderController;
 use App\Http\Controllers\Api\Offers\ExtensionController;
 use App\Http\Controllers\Api\Wallet\WalletController;
+use App\Http\Controllers\Api\ChatController;
 
 // Routes عامة
 Route::post('/register', [AuthController::class, 'register']);
@@ -32,9 +33,7 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // المواقع
     Route::prefix('locations')->group(function () {
-        Route::post('/search/nearby', [LocationController::class, 'searchNearby']);
-        Route::get('/nearby-users', [LocationController::class, 'getNearbyUsers']);
-        Route::post('/nearby-users/search', [LocationController::class, 'getNearbyUsersByCoordinates']);
+        Route::post('/nearby-users', [LocationController::class, 'getNearbyUsers']); // ✅ Smart: يعمل بإحداثيات أو موقع محفوظ
         Route::post('/{id}/set-default', [LocationController::class, 'setDefault']);
         Route::get('/', [LocationController::class, 'index']);
         Route::post('/', [LocationController::class, 'store']);
@@ -45,6 +44,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // الأسئلة
     Route::prefix('questions')->group(function () {
+        Route::post('/multiple', [QuestionController::class, 'storeMultiple']); // ✅ إضافة أسئلة متعددة
         Route::get('/nearby/all', [QuestionController::class, 'getNearbyQuestions']);
         Route::delete('/', [QuestionController::class, 'destroyAll']);
         Route::get('/{id}/views', [QuestionController::class, 'getViews']);
@@ -71,6 +71,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('orders')->group(function () {
         Route::get('/answerer', [OrderController::class, 'answererOrders']);
         Route::post('/{orderId}/answer', [OrderController::class, 'answerOrder']);
+        Route::get('/{orderId}/follow', [OrderController::class, 'followAnswer']); // متابعة الإجابة للسائل
         Route::post('/{orderId}/cancel', [OrderController::class, 'cancelOrder']);
         Route::get('/asker/questions', [OrderController::class, 'askerQuestions']);
         Route::get('/asker/questions/{questionId}', [OrderController::class, 'showQuestionWithStatus']);
@@ -82,5 +83,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/asker', [ExtensionController::class, 'askerExtensionRequests']); // طلبات السائل
         Route::post('/{extensionId}/accept', [ExtensionController::class, 'acceptExtension']); // قبول
         Route::post('/{extensionId}/reject', [ExtensionController::class, 'rejectExtension']); // رفض
+    });
+
+    // الدردشة (Chat)
+    Route::prefix('chats')->group(function () {
+        Route::post('/', [ChatController::class, 'getOrCreateChat']); // إنشاء أو الحصول على محادثة
+        Route::get('/', [ChatController::class, 'index']); // قائمة المحادثات
+        Route::get('/{chatId}/messages', [ChatController::class, 'getMessages']); // رسائل محادثة معينة
+        Route::post('/{chatId}/messages', [ChatController::class, 'sendMessage']); // إرسال رسالة
     });
 });

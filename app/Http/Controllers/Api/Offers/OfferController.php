@@ -17,126 +17,220 @@ class OfferController extends Controller
     /**
      * إضافة عرض على سؤال (للمجيبين فقط)
      */
-    public function store(Request $request, $questionId): JsonResponse
-    {
-        try {
-            $answerer = $request->user();
+public function store(Request $request, $questionId): JsonResponse
+{
+    try {
+        $answerer = $request->user();
 
-            if ($answerer->is_asker) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'السائلين غير مصرح لهم بإضافة عروض',
-                ], 403);
-            }
-
-            $question = UserQuestion::find($questionId);
-            
-            if (!$question) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'السؤال غير موجود',
-                ], 404);
-            }
-
-            if (!$question->is_active) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'السؤال غير نشط',
-                ], 400);
-            }
-
-            if ($answerer->id === $question->user_id) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'لا يمكنك إضافة عرض على سؤالك الخاص',
-                ], 400);
-            }
-
-            $validator = Validator::make($request->all(), [
-                'price' => 'required|numeric|min:0',
-                'response_time' => 'required|integer|min:1',
-                'note' => 'nullable|string|max:500',
-            ], [
-                'price.required' => 'السعر مطلوب',
-                'price.numeric' => 'السعر يجب أن يكون رقم',
-                'price.min' => 'السعر لا يمكن أن يكون سالب',
-                'response_time.required' => 'مدة الرد مطلوبة',
-                'response_time.integer' => 'مدة الرد يجب أن تكون رقم صحيح',
-                'response_time.min' => 'مدة الرد يجب أن تكون دقيقة على الأقل',
-                'note.max' => 'الملاحظة لا يمكن أن تتجاوز 500 حرف',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'بيانات غير صحيحة',
-                    'errors' => $validator->errors(),
-                ], 422);
-            }
-
-            $existingOffer = QuestionOffer::where('question_id', $questionId)
-                ->where('answerer_id', $answerer->id)
-                ->first();
-
-            if ($existingOffer) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'لديك عرض سابق على هذا السؤال',
-                    'data' => [
-                        'existing_offer' => [
-                            'id' => $existingOffer->id,
-                            'price' => $existingOffer->price,
-                            'response_time' => $existingOffer->response_time,
-                            'status' => $existingOffer->status,
-                        ]
-                    ]
-                ], 400);
-            }
-
-            $offer = QuestionOffer::create([
-                'question_id' => $questionId,
-                'answerer_id' => $answerer->id,
-                'asker_id' => $question->user_id,
-                'price' => $request->price,
-                'response_time' => $request->response_time,
-                'note' => $request->note,
-                'status' => 'pending',
-            ]);
-
-            Log::info('✅ تم إضافة عرض جديد', [
-                'offer_id' => $offer->id,
-                'question_id' => $questionId,
-                'answerer_id' => $answerer->id,
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'تم إضافة العرض بنجاح',
-                'data' => [
-                    'offer' => [
-                        'id' => $offer->id,
-                        'price' => $offer->price,
-                        'response_time' => $offer->response_time,
-                        'note' => $offer->note,
-                        'status' => $offer->status,
-                        'created_at' => $offer->created_at->format('Y-m-d H:i:s'),
-                    ]
-                ]
-            ], 201);
-
-        } catch (\Exception $e) {
-            Log::error('❌ خطأ في إضافة عرض', [
-                'error' => $e->getMessage(),
-                'question_id' => $questionId,
-                'user_id' => $request->user()->id,
-            ]);
-
+        if ($answerer->is_asker) {
             return response()->json([
                 'success' => false,
-                'message' => 'حدث خطأ أثناء إضافة العرض',
-            ], 500);
+                'message' => 'السائلين غير مصرح لهم بإضافة عروض',
+            ], 403);
         }
+
+        $question = UserQuestion::with('location')->find($questionId);
+        
+        if (!$question) {
+            return response()->json([
+                'success' => false,
+                'message' => 'السؤال غير موجود',
+            ], 404);
+        }
+
+        if (!$question->is_active) {
+            return response()->json([
+                'success' => false,
+                'message' => 'السؤال غير نشط',
+            ], 400);
+        }
+
+        if ($answerer->id === $question->user_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'لا يمكنك إضافة عرض على سؤالك الخاص',
+            ], 400);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'price' => 'required|numeric|min:0',
+            'response_time' => 'required|integer|min:1',
+            'note' => 'nullable|string|max:500',
+            
+            // ✅ بيانات الموقع - إجباري
+            'location_id' => 'required_without:location|exists:user_locations,id',
+            'location' => 'required_without:location_id|array',
+            'location.latitude' => 'required_with:location|numeric|between:-90,90',
+            'location.longitude' => 'required_with:location|numeric|between:-180,180',
+            'location.is_current' => 'nullable|boolean',
+        ], [
+            'price.required' => 'السعر مطلوب',
+            'price.numeric' => 'السعر يجب أن يكون رقم',
+            'price.min' => 'السعر لا يمكن أن يكون سالب',
+            'response_time.required' => 'مدة الرد مطلوبة',
+            'response_time.integer' => 'مدة الرد يجب أن تكون رقم صحيح',
+            'response_time.min' => 'مدة الرد يجب أن تكون دقيقة على الأقل',
+            'note.max' => 'الملاحظة لا يمكن أن تتجاوز 500 حرف',
+            'location_id.required_without' => 'يجب إرسال location_id أو بيانات الموقع',
+            'location_id.exists' => 'الموقع المحدد غير موجود',
+            'location.required_without' => 'يجب إرسال بيانات الموقع أو location_id',
+            'location.latitude.required_with' => 'خط العرض مطلوب',
+            'location.longitude.required_with' => 'خط الطول مطلوب',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'بيانات غير صحيحة',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $existingOffer = QuestionOffer::where('question_id', $questionId)
+            ->where('answerer_id', $answerer->id)
+            ->first();
+
+        if ($existingOffer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'لديك عرض سابق على هذا السؤال',
+                'data' => [
+                    'existing_offer' => [
+                        'id' => $existingOffer->id,
+                        'price' => $existingOffer->price,
+                        'response_time' => $existingOffer->response_time,
+                        'status' => $existingOffer->status,
+                    ]
+                ]
+            ], 400);
+        }
+
+        // ✅ معالجة الموقع
+        $selectedLocation = null;
+
+        if (isset($validator->validated()['location_id'])) {
+            $selectedLocation = $answerer->locations()->find($validator->validated()['location_id']);
+
+            if (!$selectedLocation) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'الموقع المحدد لا ينتمي لحسابك',
+                ], 403);
+            }
+        } elseif (isset($validator->validated()['location'])) {
+            $locationData = $validator->validated()['location'];
+
+            // البحث عن موقع موجود
+            $existingLocation = $answerer->locations()
+                ->whereBetween('latitude', [
+                    $locationData['latitude'] - 0.0001,
+                    $locationData['latitude'] + 0.0001
+                ])
+                ->whereBetween('longitude', [
+                    $locationData['longitude'] - 0.0001,
+                    $locationData['longitude'] + 0.0001
+                ])
+                ->first();
+
+            if ($existingLocation) {
+                $selectedLocation = $existingLocation;
+            } else {
+                $selectedLocation = $answerer->locations()->create([
+                    'latitude' => $locationData['latitude'],
+                    'longitude' => $locationData['longitude'],
+                    'is_current' => $locationData['is_current'] ?? ($answerer->locations()->count() === 0),
+                ]);
+            }
+        }
+
+        // ✅ التحقق من المسافة بين المجيب والسؤال (max 1km)
+        $questionLocation = $question->location;
+        
+        if (!$questionLocation) {
+            return response()->json([
+                'success' => false,
+                'message' => 'السؤال ليس له موقع محدد',
+            ], 400);
+        }
+
+        $distance = \App\Models\UserLocation::calculateDistance(
+            $selectedLocation->latitude,
+            $selectedLocation->longitude,
+            $questionLocation->latitude,
+            $questionLocation->longitude
+        );
+
+        if ($distance > 1) {
+            return response()->json([
+                'success' => false,
+                'message' => 'يجب أن تكون على مسافة أقل من 1 كم من موقع السؤال',
+                'data' => [
+                    'distance' => round($distance, 2) . ' كم',
+                    'max_allowed' => '1 كم',
+                    'question_location' => [
+                        'latitude' => $questionLocation->latitude,
+                        'longitude' => $questionLocation->longitude,
+                    ],
+                    'your_location' => [
+                        'latitude' => $selectedLocation->latitude,
+                        'longitude' => $selectedLocation->longitude,
+                    ]
+                ]
+            ], 400);
+        }
+
+        // ✅ إنشاء العرض مع الموقع
+        $offer = QuestionOffer::create([
+            'question_id' => $questionId,
+            'answerer_id' => $answerer->id,
+            'asker_id' => $question->user_id,
+            'location_id' => $selectedLocation->id, // ✅ إضافة location_id
+            'price' => $request->price,
+            'response_time' => $request->response_time,
+            'note' => $request->note,
+            'status' => 'pending',
+        ]);
+
+        Log::info('✅ Offer created with location', [
+            'offer_id' => $offer->id,
+            'question_id' => $questionId,
+            'answerer_id' => $answerer->id,
+            'location_id' => $selectedLocation->id,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم إضافة العرض بنجاح',
+            'data' => [
+                'offer' => [
+                    'id' => $offer->id,
+                    'price' => $offer->price,
+                    'response_time' => $offer->response_time,
+                    'note' => $offer->note,
+                    'status' => $offer->status,
+                    'location' => [
+                        'id' => $selectedLocation->id,
+                        'latitude' => $selectedLocation->latitude,
+                        'longitude' => $selectedLocation->longitude,
+                        'is_current' => $selectedLocation->is_current,
+                    ],
+                    'created_at' => $offer->created_at->format('Y-m-d H:i:s'),
+                ]
+            ]
+        ], 201);
+
+    } catch (\Exception $e) {
+        Log::error('❌ Error creating offer', [
+            'error' => $e->getMessage(),
+            'question_id' => $questionId,
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'حدث خطأ أثناء إضافة العرض',
+        ], 500);
     }
+}
 
     /**
      * عرض تفاصيل عرض معين (للسائل)
@@ -210,6 +304,7 @@ class OfferController extends Controller
 
     /**
      * عرض جميع العروض على سؤال معين (للسائل فقط)
+     * مع تفاصيل كاملة عن المجيبين
      */
     public function getQuestionOffers(Request $request, $questionId): JsonResponse
     {
@@ -232,7 +327,7 @@ class OfferController extends Controller
                 ], 403);
             }
 
-            $offers = QuestionOffer::with('answerer')
+            $offers = QuestionOffer::with(['answerer', 'location'])
                 ->where('question_id', $questionId)
                 ->orderBy('created_at', 'desc')
                 ->get();
@@ -240,6 +335,11 @@ class OfferController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => [
+                    'question' => [
+                        'id' => $question->id,
+                        'question' => $question->question,
+                        'price' => $question->price,
+                    ],
                     'offers' => $offers->map(function ($offer) {
                         return [
                             'id' => $offer->id,
@@ -251,7 +351,17 @@ class OfferController extends Controller
                                 'id' => $offer->answerer->id,
                                 'name' => $offer->answerer->name,
                                 'phone' => $offer->answerer->phone,
+                                'email' => $offer->answerer->email,
+                                'gender' => $offer->answerer->gender,
+                                'description' => $offer->answerer->description,
+                                'is_active' => $offer->answerer->is_active,
                             ],
+                            'location' => $offer->location ? [
+                                'id' => $offer->location->id,
+                                'latitude' => $offer->location->latitude,
+                                'longitude' => $offer->location->longitude,
+                                'is_current' => $offer->location->is_current,
+                            ] : null,
                             'created_at' => $offer->created_at->format('Y-m-d H:i:s'),
                         ];
                     }),
@@ -479,7 +589,7 @@ class OfferController extends Controller
                 ], 422);
             }
 
-            $offer = QuestionOffer::with('question')->find($request->offer_id);
+            $offer = QuestionOffer::with(['question', 'answerer'])->find($request->offer_id);
 
             if ($offer->asker_id !== $asker->id) {
                 return response()->json([
@@ -495,10 +605,10 @@ class OfferController extends Controller
                 ], 400);
             }
 
-            // قبول العرض
+            // ✅ قبول العرض
             $offer->accept();
 
-            // إنشاء طلب (Order)
+            // ✅ إنشاء طلب (Order)
             $expiresAt = Carbon::now()->addMinutes($offer->response_time);
             
             $order = Order::create([
@@ -520,15 +630,21 @@ class OfferController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'تم قبول العرض وإنشاء طلب بنجاح',
+                'message' => 'تم قبول العرض وجدَّد الطلب بنجاح',
                 'data' => [
                     'order' => [
                         'id' => $order->id,
                         'status' => $order->status,
                         'price' => $order->price,
+                        'held_amount' => $order->held_amount,
                         'response_time' => $order->response_time,
                         'expires_at' => $order->expires_at->format('Y-m-d H:i:s'),
                         'remaining_minutes' => $order->remaining_time,
+                    ],
+                    'answerer' => [
+                        'id' => $offer->answerer->id,
+                        'name' => $offer->answerer->name,
+                        'phone' => $offer->answerer->phone,
                     ]
                 ]
             ], 200);
@@ -542,6 +658,7 @@ class OfferController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'حدث خطأ أثناء قبول العرض',
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }

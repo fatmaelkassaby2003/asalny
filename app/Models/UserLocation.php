@@ -15,11 +15,9 @@ class UserLocation extends Model
 
     protected $fillable = [
         'user_id',
-        'title',
         'latitude',
         'longitude',
-        'address',
-        'is_default',
+        'is_current',
     ];
 
     protected function casts(): array
@@ -27,7 +25,7 @@ class UserLocation extends Model
         return [
             'latitude' => 'decimal:7',
             'longitude' => 'decimal:7',
-            'is_default' => 'boolean',
+            'is_current' => 'boolean',
         ];
     }
 

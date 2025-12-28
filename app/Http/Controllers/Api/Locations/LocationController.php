@@ -25,7 +25,7 @@ class LocationController extends Controller
     {
         try {
             $locations = $request->user()->locations()
-                ->orderBy('is_default', 'desc')
+                ->orderBy('is_current', 'desc')
                 ->orderBy('created_at', 'desc')
                 ->get();
 
@@ -35,11 +35,9 @@ class LocationController extends Controller
                     'locations' => $locations->map(function($location) {
                         return [
                             'id' => $location->id,
-                            'title' => $location->title,
                             'latitude' => $location->latitude,
                             'longitude' => $location->longitude,
-                            'address' => $location->address,
-                            'is_default' => $location->is_default,
+                            'is_current' => $location->is_current,
                             'created_at' => $location->created_at->format('Y-m-d H:i:s'),
                         ];
                     }),
@@ -82,11 +80,11 @@ class LocationController extends Controller
 
             // ✅ إذا الموقع موجود من قبل
             if ($existingLocation) {
-                // إلغاء الافتراضية من المواقع الأخرى
-                $user->locations()->update(['is_default' => false]);
+                // إلغاء الموقع الحالي من المواقع الأخرى
+                $user->locations()->update(['is_current' => false]);
                 
                 // تفعيل هذا الموقع كموقع حالي
-                $existingLocation->update(['is_default' => true]);
+                $existingLocation->update(['is_current' => true]);
                 
                 Log::info('✅ Existing location activated as current for user: ' . $user->id);
                 
@@ -96,11 +94,9 @@ class LocationController extends Controller
                     'data' => [
                         'location' => [
                             'id' => $existingLocation->id,
-                            'title' => $existingLocation->title,
                             'latitude' => $existingLocation->latitude,
                             'longitude' => $existingLocation->longitude,
-                            'address' => $existingLocation->address,
-                            'is_default' => true,
+                            'is_current' => true,
                             'is_existing' => true,  // علامة أن هذا موقع موجود مسبقاً
                             'created_at' => $existingLocation->created_at->format('Y-m-d H:i:s'),
                         ]
@@ -108,21 +104,19 @@ class LocationController extends Controller
                 ], 200);
             }
             
-            // ✅ إذا كان المستخدم يريد هذا الموقع افتراضي
-            if ($request->is_default) {
-                $user->locations()->update(['is_default' => false]);
+            // ✅ إذا كان المستخدم يريد هذا الموقع حالي
+            if ($request->is_current) {
+                $user->locations()->update(['is_current' => false]);
             }
             
-            // ✅ إذا لم يكن هناك مواقع أخرى، اجعل هذا افتراضي
+            // ✅ إذا لم يكن هناك مواقع أخرى، اجعل هذا الموقع الحالي
             $isFirstLocation = $user->locations()->count() === 0;
 
             // ✅ إنشاء الموقع الجديد
             $location = $user->locations()->create([
-                'title' => $request->title,
                 'latitude' => $request->latitude,
                 'longitude' => $request->longitude,
-                'address' => $request->address,
-                'is_default' => $request->is_default ?? $isFirstLocation,
+                'is_current' => $request->is_current ?? $isFirstLocation,
             ]);
 
             Log::info('✅ New location added for user: ' . $user->id);
@@ -133,11 +127,9 @@ class LocationController extends Controller
                 'data' => [
                     'location' => [
                         'id' => $location->id,
-                        'title' => $location->title,
                         'latitude' => $location->latitude,
                         'longitude' => $location->longitude,
-                        'address' => $location->address,
-                        'is_default' => $location->is_default,
+                        'is_current' => $location->is_current,
                         'is_existing' => false,  // موقع جديد
                         'created_at' => $location->created_at->format('Y-m-d H:i:s'),
                     ]
@@ -156,7 +148,7 @@ class LocationController extends Controller
     }
     
     /**
-     * تعيين موقع كافتراضي
+     * تعيين موقع كموقع حالي
      * 
      * @param Request $request
      * @param int $id
@@ -168,11 +160,11 @@ class LocationController extends Controller
             $user = $request->user();
             $location = $user->locations()->findOrFail($id);
 
-            // إلغاء الافتراضية من جميع المواقع
-            $user->locations()->update(['is_default' => false]);
+            // إلغاء الموقع الحالي من جميع المواقع
+            $user->locations()->update(['is_current' => false]);
 
-            // تعيين الموقع الحالي كافتراضي
-            $location->update(['is_default' => true]);
+            // تعيين الموقع الحالي
+            $location->update(['is_current' => true]);
 
             Log::info('✅ Current location set: ' . $location->id);
 
@@ -182,8 +174,9 @@ class LocationController extends Controller
                 'data' => [
                     'location' => [
                         'id' => $location->id,
-                        'title' => $location->title,
-                        'is_default' => true,
+                        'latitude' => $location->latitude,
+                        'longitude' => $location->longitude,
+                        'is_current' => true,
                     ]
                 ]
             ], 200);
@@ -212,11 +205,9 @@ class LocationController extends Controller
                 'data' => [
                     'location' => [
                         'id' => $location->id,
-                        'title' => $location->title,
                         'latitude' => $location->latitude,
                         'longitude' => $location->longitude,
-                        'address' => $location->address,
-                        'is_default' => $location->is_default,
+                        'is_current' => $location->is_current,
                         'created_at' => $location->created_at->format('Y-m-d H:i:s'),
                     ]
                 ]
@@ -243,17 +234,15 @@ class LocationController extends Controller
             $user = $request->user();
             $location = $user->locations()->findOrFail($id);
 
-            // إذا كان هذا الموقع سيصبح افتراضي، إلغاء الافتراضية من المواقع الأخرى
-            if ($request->is_default) {
-                $user->locations()->where('id', '!=', $id)->update(['is_default' => false]);
+            // إذا كان هذا الموقع سيصبح موقع حالي، إلغاء الموقع الحالي من المواقع الأخرى
+            if ($request->is_current) {
+                $user->locations()->where('id', '!=', $id)->update(['is_current' => false]);
             }
 
             $location->update([
-                'title' => $request->title ?? $location->title,
                 'latitude' => $request->latitude ?? $location->latitude,
                 'longitude' => $request->longitude ?? $location->longitude,
-                'address' => $request->address ?? $location->address,
-                'is_default' => $request->is_default ?? $location->is_default,
+                'is_current' => $request->is_current ?? $location->is_current,
             ]);
 
             Log::info('✅ Location updated: ' . $location->id);
@@ -264,11 +253,9 @@ class LocationController extends Controller
                 'data' => [
                     'location' => [
                         'id' => $location->id,
-                        'title' => $location->title,
                         'latitude' => $location->latitude,
                         'longitude' => $location->longitude,
-                        'address' => $location->address,
-                        'is_default' => $location->is_default,
+                        'is_current' => $location->is_current,
                         'updated_at' => $location->updated_at->format('Y-m-d H:i:s'),
                     ]
                 ]
@@ -294,14 +281,14 @@ class LocationController extends Controller
         try {
             $location = $request->user()->locations()->findOrFail($id);
             
-            $wasDefault = $location->is_default;
+            $wasCurrent = $location->is_current;
             $location->delete();
 
-            // إذا كان الموقع المحذوف افتراضي، اجعل أول موقع آخر افتراضي
-            if ($wasDefault) {
+            // إذا كان الموقع المحذوف هو الموقع الحالي، اجعل أول موقع آخر موقع حالي
+            if ($wasCurrent) {
                 $firstLocation = $request->user()->locations()->first();
                 if ($firstLocation) {
-                    $firstLocation->update(['is_default' => true]);
+                    $firstLocation->update(['is_current' => true]);
                 }
             }
 
@@ -321,83 +308,11 @@ class LocationController extends Controller
     }
 
     /**
-     * البحث عن المواقع القريبة
+     * جلب المستخدمين القريبين (Smart Method)
      * 
-     * @param SearchLocationRequest $request
-     * @return JsonResponse
-     */
-    public function searchNearby(SearchLocationRequest $request): JsonResponse
-    {
-        try {
-            $latitude = $request->latitude;
-            $longitude = $request->longitude;
-            $radius = $request->radius ?? 10; // افتراضي 10 كم
-
-            Log::info("🔍 Searching locations near: lat={$latitude}, lon={$longitude}, radius={$radius}km");
-
-            // البحث في قاعدة البيانات
-            $locations = UserLocation::with('user')
-                ->nearby($latitude, $longitude, $radius)
-                ->get();
-
-            // حساب المسافة الدقيقة لكل موقع
-            $results = $locations->map(function($location) use ($latitude, $longitude) {
-                $distance = UserLocation::calculateDistance(
-                    $latitude, 
-                    $longitude, 
-                    $location->latitude, 
-                    $location->longitude
-                );
-
-                return [
-                    'id' => $location->id,
-                    'user' => [
-                        'id' => $location->user->id,
-                        'name' => $location->user->name,
-                        'phone' => $location->user->phone,
-                    ],
-                    'title' => $location->title,
-                    'latitude' => $location->latitude,
-                    'longitude' => $location->longitude,
-                    'address' => $location->address,
-                    'distance_km' => round($distance, 2),
-                ];
-            })
-            ->filter(function($item) use ($radius) {
-                // تصفية حسب المسافة الفعلية
-                return $item['distance_km'] <= $radius;
-            })
-            ->sortBy('distance_km')
-            ->values();
-
-            Log::info("✅ Found {$results->count()} locations within {$radius}km");
-
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'search_location' => [
-                        'latitude' => $latitude,
-                        'longitude' => $longitude,
-                        'radius_km' => $radius,
-                    ],
-                    'locations' => $results,
-                    'total' => $results->count(),
-                ]
-            ], 200);
-
-        } catch (\Exception $e) {
-            Log::error('❌ Error searching locations: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'حدث خطأ أثناء البحث',
-            ], 500);
-        }
-    }
-
-    /**
-     * جلب المستخدمين القريبين من موقع المستخدم الحالي
-     * المسافة القصوى: 1 كيلومتر
+     * يعمل بطريقتين:
+     * 1. إذا تم إرسال latitude و longitude → يستخدمهم
+     * 2. إذا لم يتم الإرسال → يستخدم الموقع الحالي (is_current)
      * 
      * @param Request $request
      * @return JsonResponse
@@ -407,36 +322,61 @@ class LocationController extends Controller
         try {
             $user = $request->user();
             
-            // ✅ الحصول على الموقع الافتراضي للمستخدم الحالي
-            $myLocation = $user->locations()->where('is_default', true)->first();
-            
-            // ✅ إذا لم يكن لديه موقع افتراضي، استخدم أول موقع
-            if (!$myLocation) {
-                $myLocation = $user->locations()->first();
-            }
-            
-            // ✅ إذا لم يكن لديه أي موقع
-            if (!$myLocation) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'يجب إضافة موقع أولاً',
-                ], 400);
-            }
-
-            $myLatitude = $myLocation->latitude;
-            $myLongitude = $myLocation->longitude;
-            $maxDistance = 1; // كيلومتر واحد فقط
-
-            Log::info("🔍 Searching nearby users from location", [
-                'user_id' => $user->id,
-                'latitude' => $myLatitude,
-                'longitude' => $myLongitude,
-                'max_distance' => $maxDistance
+            // ✅ التحقق من البيانات (اختياري)
+            $validated = $request->validate([
+                'latitude' => 'nullable|numeric|between:-90,90',
+                'longitude' => 'nullable|numeric|between:-180,180',
+                'radius' => 'nullable|numeric|min:0.1|max:100', // من 100 متر إلى 100 كم
             ]);
+
+            $maxDistance = $validated['radius'] ?? 1; // افتراضي 1 كم
+            
+            // ✅ حالة 1: إذا تم إرسال إحداثيات
+            if ($request->has('latitude') && $request->has('longitude')) {
+                $myLatitude = $validated['latitude'];
+                $myLongitude = $validated['longitude'];
+                $searchMethod = 'manual_coordinates';
+                
+                Log::info("🔍 Searching nearby users from manual coordinates", [
+                    'user_id' => $user->id,
+                    'latitude' => $myLatitude,
+                    'longitude' => $myLongitude,
+                    'radius' => $maxDistance
+                ]);
+            } 
+            // ✅ حالة 2: استخدام الموقع الحالي
+            else {
+                $myLocation = $user->locations()->where('is_current', true)->first();
+                
+                // إذا لم يكن لديه موقع حالي، استخدم أول موقع
+                if (!$myLocation) {
+                    $myLocation = $user->locations()->first();
+                }
+                
+                // إذا لم يكن لديه أي موقع
+                if (!$myLocation) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'يجب إضافة موقع أو إرسال إحداثيات',
+                    ], 400);
+                }
+
+                $myLatitude = $myLocation->latitude;
+                $myLongitude = $myLocation->longitude;
+                $searchMethod = 'saved_location';
+                
+                Log::info("🔍 Searching nearby users from saved location", [
+                    'user_id' => $user->id,
+                    'location_id' => $myLocation->id,
+                    'latitude' => $myLatitude,
+                    'longitude' => $myLongitude,
+                    'radius' => $maxDistance
+                ]);
+            }
 
             // ✅ البحث عن جميع المواقع القريبة (ما عدا مواقع المستخدم نفسه)
             $nearbyLocations = UserLocation::with('user')
-                ->where('user_id', '!=', $user->id)  // استبعاد المستخدم الحالي
+                ->where('user_id', '!=', $user->id)
                 ->nearby($myLatitude, $myLongitude, $maxDistance)
                 ->get();
 
@@ -449,7 +389,6 @@ class LocationController extends Controller
                     $location->longitude
                 );
 
-                // إرجاع البيانات فقط إذا كانت المسافة ≤ 1 كم
                 if ($distance <= $maxDistance) {
                     return [
                         'user_id' => $location->user->id,
@@ -459,105 +398,8 @@ class LocationController extends Controller
                         'gender' => $location->user->gender,
                         'location' => [
                             'id' => $location->id,
-                            'title' => $location->title,
                             'latitude' => $location->latitude,
                             'longitude' => $location->longitude,
-                            'address' => $location->address,
-                        ],
-                        'distance_km' => round($distance, 3),  // 3 أرقام عشرية للدقة
-                        'distance_meters' => round($distance * 1000),  // بالمتر
-                    ];
-                }
-                return null;
-            })
-            ->filter()  // إزالة القيم null
-            ->sortBy('distance_km')  // ترتيب من الأقرب للأبعد
-            ->values()  // إعادة ترقيم المصفوفة
-            ->unique('user_id');  // إزالة التكرار (لو المستخدم عنده أكثر من موقع)
-
-            Log::info("✅ Found {$nearbyUsers->count()} nearby users within {$maxDistance}km");
-
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'my_location' => [
-                        'latitude' => $myLatitude,
-                        'longitude' => $myLongitude,
-                        'address' => $myLocation->address,
-                    ],
-                    'max_distance_km' => $maxDistance,
-                    'nearby_users' => $nearbyUsers,
-                    'total' => $nearbyUsers->count(),
-                ]
-            ], 200);
-
-        } catch (\Exception $e) {
-            Log::error('❌ Error getting nearby users: ' . $e->getMessage());
-            Log::error('Stack trace: ' . $e->getTraceAsString());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'حدث خطأ أثناء البحث عن المستخدمين القريبين',
-                'error' => config('app.debug') ? $e->getMessage() : null
-            ], 500);
-        }
-    }
-
-    /**
-     * جلب المستخدمين القريبين بناءً على إحداثيات محددة
-     * (اختياري - إذا كنتي عايزة ترسلي lat & lng من الموبايل مباشرة)
-     * 
-     * @param Request $request
-     * @return JsonResponse
-     */
-    public function getNearbyUsersByCoordinates(Request $request): JsonResponse
-    {
-        // التحقق من البيانات
-        $validated = $request->validate([
-            'latitude' => 'required|numeric|between:-90,90',
-            'longitude' => 'required|numeric|between:-180,180',
-        ]);
-
-        try {
-            $user = $request->user();
-            $latitude = $validated['latitude'];
-            $longitude = $validated['longitude'];
-            $maxDistance = 1; // كيلومتر واحد
-
-            Log::info("🔍 Searching nearby users from coordinates", [
-                'user_id' => $user->id,
-                'latitude' => $latitude,
-                'longitude' => $longitude,
-            ]);
-
-            // البحث عن المواقع القريبة
-            $nearbyLocations = UserLocation::with('user')
-                ->where('user_id', '!=', $user->id)
-                ->nearby($latitude, $longitude, $maxDistance)
-                ->get();
-
-            // حساب المسافة وتصفية النتائج
-            $nearbyUsers = $nearbyLocations->map(function($location) use ($latitude, $longitude, $maxDistance) {
-                $distance = UserLocation::calculateDistance(
-                    $latitude, 
-                    $longitude, 
-                    $location->latitude, 
-                    $location->longitude
-                );
-
-                if ($distance <= $maxDistance) {
-                    return [
-                        'user_id' => $location->user->id,
-                        'name' => $location->user->name,
-                        'phone' => $location->user->phone,
-                        'email' => $location->user->email,
-                        'gender' => $location->user->gender,
-                        'location' => [
-                            'id' => $location->id,
-                            'title' => $location->title,
-                            'latitude' => $location->latitude,
-                            'longitude' => $location->longitude,
-                            'address' => $location->address,
                         ],
                         'distance_km' => round($distance, 3),
                         'distance_meters' => round($distance * 1000),
@@ -575,9 +417,10 @@ class LocationController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'search_location' => [
-                        'latitude' => $latitude,
-                        'longitude' => $longitude,
+                    'search_method' => $searchMethod, // manual_coordinates أو saved_location
+                    'my_location' => [
+                        'latitude' => $myLatitude,
+                        'longitude' => $myLongitude,
                     ],
                     'max_distance_km' => $maxDistance,
                     'nearby_users' => $nearbyUsers,
@@ -587,6 +430,7 @@ class LocationController extends Controller
 
         } catch (\Exception $e) {
             Log::error('❌ Error getting nearby users: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
             
             return response()->json([
                 'success' => false,

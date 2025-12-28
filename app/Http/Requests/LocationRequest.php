@@ -24,11 +24,9 @@ class LocationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title' => 'nullable|string|max:255',
             'latitude' => 'required|numeric|between:-90,90',
             'longitude' => 'required|numeric|between:-180,180',
-            'address' => 'nullable|string|max:500',
-            'is_default' => 'nullable|boolean',
+            'is_current' => 'nullable|boolean',
         ];
     }
 
@@ -47,9 +45,6 @@ class LocationRequest extends FormRequest
             'longitude.required' => 'خط الطول مطلوب',
             'longitude.numeric' => 'خط الطول يجب أن يكون رقم',
             'longitude.between' => 'خط الطول يجب أن يكون بين -180 و 180',
-            
-            'title.max' => 'اسم المكان يجب ألا يتجاوز 255 حرف',
-            'address.max' => 'العنوان يجب ألا يتجاوز 500 حرف',
         ];
     }
 }

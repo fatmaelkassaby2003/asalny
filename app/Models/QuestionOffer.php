@@ -13,6 +13,7 @@ class QuestionOffer extends Model
         'question_id',
         'answerer_id',
         'asker_id',
+        'location_id',
         'price',
         'response_time',
         'note',
@@ -59,6 +60,14 @@ class QuestionOffer extends Model
     public function asker()
     {
         return $this->belongsTo(User::class, 'asker_id');
+    }
+
+    /**
+     * العلاقة مع الموقع
+     */
+    public function location()
+    {
+        return $this->belongsTo(UserLocation::class, 'location_id');
     }
 
     /**

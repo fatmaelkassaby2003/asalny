@@ -1,7 +1,5 @@
 <?php
 
-// app/Http/Controllers/Api/Locations/QuestionController.php
-
 namespace App\Http\Controllers\Api\Locations;
 
 use App\Http\Controllers\Controller;
@@ -13,13 +11,11 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Carbon\Carbon;
 
 class QuestionController extends Controller
 {
     /**
-     * عرض جميع أسئلة السائل (المستخدم الحالي)
-     * ✅ للسائلين فقط
+     * عرض جميع أسئلة السائل مع حالاتها
      */
     public function index(Request $request): JsonResponse
     {
@@ -33,13 +29,6 @@ class QuestionController extends Controller
                 ], 403);
             }
 
-            $questions = $asker->questions()
-                        ->with(['location', 'views'])
-                        ->withCount('views')
-                        ->orderBy('created_at', 'desc')
-                        ->get();
-
-            // تحديث الطلبات المنتهية
             Order::updateExpiredOrders();
 
             $questions = UserQuestion::with(['location', 'offers', 'offers.order'])
@@ -50,26 +39,25 @@ class QuestionController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get()
                 ->map(function ($question) {
-                    // تحديد حالة السؤال
                     $acceptedOffer = $question->offers->firstWhere('status', 'accepted');
                     $order = $acceptedOffer ? $acceptedOffer->order : null;
 
                     if ($order) {
                         if ($order->status === 'answered') {
-                            $questionStatus = 'answered'; // تم الرد
+                            $questionStatus = 'answered';
                         } elseif ($order->status === 'pending') {
-                            $questionStatus = 'waiting_answer'; // في انتظار الرد
+                            $questionStatus = 'waiting_answer';
                         } elseif ($order->status === 'cancelled') {
-                            $questionStatus = 'cancelled'; // ملغي
+                            $questionStatus = 'cancelled';
                         } elseif ($order->status === 'expired') {
-                            $questionStatus = 'expired'; // منتهي
+                            $questionStatus = 'expired';
                         } else {
                             $questionStatus = 'unknown';
                         }
                     } elseif ($question->pending_offers_count > 0) {
-                        $questionStatus = 'has_offers'; // يوجد عروض بانتظار القبول
+                        $questionStatus = 'has_offers';
                     } else {
-                        $questionStatus = 'no_offers'; // لا يوجد عروض
+                        $questionStatus = 'no_offers';
                     }
 
                     return [
@@ -78,12 +66,11 @@ class QuestionController extends Controller
                         'price' => $question->price,
                         'is_active' => $question->is_active,
                         'status' => $questionStatus,
-                        'views_count' => $question->views_count,
+                        'views_count' => $question->views()->count(),
                         'pending_offers_count' => $question->pending_offers_count,
                         'location' => [
-                            'id' => $question->location->id,
-                            'title' => $question->location->title,
-                            'address' => $question->location->address,
+                            'latitude' => $question->location->latitude,
+                            'longitude' => $question->location->longitude,
                         ],
                         'order' => $order ? [
                             'id' => $order->id,
@@ -96,7 +83,6 @@ class QuestionController extends Controller
                     ];
                 });
 
-            // إحصائيات
             $stats = [
                 'total' => $questions->count(),
                 'answered' => $questions->where('status', 'answered')->count(),
@@ -114,8 +100,9 @@ class QuestionController extends Controller
                     'stats' => $stats,
                 ]
             ], 200);
+
         } catch (\Exception $e) {
-            Log::error('❌ خطأ في عرض أسئلة السائل', [
+            Log::error('❌ خطأ في عرض الأسئلة', [
                 'error' => $e->getMessage(),
                 'user_id' => $request->user()->id,
             ]);
@@ -128,16 +115,10 @@ class QuestionController extends Controller
     }
 
     /**
-     * إضافة سؤال جديد
-     * ✅ للسائلين فقط
-     */
-    /**
-     * إضافة سؤال جديد
-     * ✅ للسائلين فقط
+     * إضافة سؤال مع الموقع
      */
     public function store(Request $request): JsonResponse
     {
-        // ✅ التحقق: المستخدم لازم يكون سائل
         if (!$request->user()->is_asker) {
             return response()->json([
                 'success' => false,
@@ -148,110 +129,62 @@ class QuestionController extends Controller
         $validated = $request->validate([
             'question' => 'required|string|max:1000',
             'price' => 'required|numeric|min:0|max:999999.99',
-
-            // ✅ إما location_id أو بيانات الموقع كاملة
-            'location_id' => 'nullable|exists:user_locations,id',
-            'location' => 'nullable|array',
-            'location.title' => 'required_with:location|string|max:255',
-            'location.latitude' => 'required_with:location|numeric|between:-90,90',
-            'location.longitude' => 'required_with:location|numeric|between:-180,180',
-            'location.address' => 'nullable|string|max:500',
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
         ], [
             'question.required' => 'نص السؤال مطلوب',
-            'question.max' => 'السؤال يجب ألا يتجاوز 1000 حرف',
             'price.required' => 'السعر مطلوب',
-            'price.numeric' => 'السعر يجب أن يكون رقم',
-            'price.min' => 'السعر يجب أن يكون صفر أو أكثر',
-            'location_id.exists' => 'الموقع المحدد غير موجود',
-            'location.title.required_with' => 'عنوان الموقع مطلوب',
-            'location.latitude.required_with' => 'خط العرض مطلوب',
-            'location.longitude.required_with' => 'خط الطول مطلوب',
-            'location.latitude.between' => 'خط العرض يجب أن يكون بين -90 و 90',
-            'location.longitude.between' => 'خط الطول يجب أن يكون بين -180 و 180',
+            'latitude.required' => 'خط العرض مطلوب',
+            'longitude.required' => 'خط الطول مطلوب',
         ]);
 
         try {
             $user = $request->user();
-            $selectedLocation = null;
 
-            // ✅ الحالة 1: إذا تم إرسال location_id
-            if (isset($validated['location_id'])) {
-                $selectedLocation = $user->locations()->find($validated['location_id']);
+            // البحث عن موقع موجود بنفس الإحداثيات (تقريباً)
+            $existingLocation = $user->locations()
+                ->whereBetween('latitude', [
+                    $validated['latitude'] - 0.0001,
+                    $validated['latitude'] + 0.0001
+                ])
+                ->whereBetween('longitude', [
+                    $validated['longitude'] - 0.0001,
+                    $validated['longitude'] + 0.0001
+                ])
+                ->first();
 
-                if (!$selectedLocation) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'الموقع المحدد لا ينتمي لحسابك',
-                    ], 403);
-                }
-            }
-            // ✅ الحالة 2: إذا تم إرسال بيانات الموقع الكاملة
-            elseif (isset($validated['location'])) {
-                $locationData = $validated['location'];
-
-                // البحث عن موقع موجود بنفس الإحداثيات (تقريباً)
-                $existingLocation = $user->locations()
-                    ->whereBetween('latitude', [
-                        $locationData['latitude'] - 0.0001,  // فرق حوالي 11 متر
-                        $locationData['latitude'] + 0.0001
-                    ])
-                    ->whereBetween('longitude', [
-                        $locationData['longitude'] - 0.0001,
-                        $locationData['longitude'] + 0.0001
-                    ])
-                    ->first();
-
-                if ($existingLocation) {
-                    // ✅ الموقع موجود - استخدمه
-                    $selectedLocation = $existingLocation;
-
-                    Log::info('📍 Existing location found and used', [
-                        'location_id' => $existingLocation->id,
-                        'user_id' => $user->id
-                    ]);
-                } else {
-                    // ✅ الموقع غير موجود - أنشئ موقع جديد
-                    $selectedLocation = $user->locations()->create([
-                        'title' => $locationData['title'],
-                        'latitude' => $locationData['latitude'],
-                        'longitude' => $locationData['longitude'],
-                        'address' => $locationData['address'] ?? null,
-                        'is_default' => $user->locations()->count() === 0, // افتراضي لو أول موقع
-                    ]);
-
-                    Log::info('📍 New location created', [
-                        'location_id' => $selectedLocation->id,
-                        'user_id' => $user->id,
-                        'title' => $selectedLocation->title
-                    ]);
-                }
-            }
-            // ✅ الحالة 3: لم يتم إرسال أي بيانات موقع
-            else {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'يجب إرسال location_id أو بيانات الموقع الكاملة',
-                ], 400);
+            if ($existingLocation) {
+                $location = $existingLocation;
+                // جعله الموقع الحالي
+                $user->locations()->update(['is_current' => false]);
+                $location->update(['is_current' => true]);
+            } else {
+                // إنشاء موقع جديد
+                $user->locations()->update(['is_current' => false]);
+                $location = $user->locations()->create([
+                    'latitude' => $validated['latitude'],
+                    'longitude' => $validated['longitude'],
+                    'is_current' => true,
+                ]);
             }
 
-            // ✅ إنشاء السؤال ونشره (is_active = true)
+            // إنشاء السؤال
             $question = $user->questions()->create([
-                'location_id' => $selectedLocation->id,
+                'location_id' => $location->id,
                 'question' => $validated['question'],
                 'price' => $validated['price'],
-                'is_active' => true, // ✅ منشور مباشرة
+                'is_active' => true,
             ]);
 
-            Log::info('✅ Question added and published', [
-                'asker_id' => $user->id,
+            Log::info('✅ سؤال تم إضافته', [
                 'question_id' => $question->id,
-                'location_id' => $selectedLocation->id,
-                'is_active' => true
+                'user_id' => $user->id,
+                'location_id' => $location->id,
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'تم إضافة السؤال ونشره بنجاح',
+                'message' => 'تم إضافة السؤال بنجاح',
                 'data' => [
                     'question' => [
                         'id' => $question->id,
@@ -260,19 +193,18 @@ class QuestionController extends Controller
                         'is_active' => $question->is_active,
                         'views_count' => 0,
                         'location' => [
-                            'id' => $selectedLocation->id,
-                            'title' => $selectedLocation->title,
-                            'latitude' => $selectedLocation->latitude,
-                            'longitude' => $selectedLocation->longitude,
-                            'address' => $selectedLocation->address,
-                            'is_new' => !isset($validated['location_id']) && !isset($existingLocation), // ✅ علامة: هل موقع جديد؟
+                            'latitude' => $location->latitude,
+                            'longitude' => $location->longitude,
                         ],
                         'created_at' => $question->created_at->format('Y-m-d H:i:s'),
                     ]
                 ]
             ], 201);
+
         } catch (\Exception $e) {
-            Log::error('❌ Error adding question: ' . $e->getMessage());
+            Log::error('❌ خطأ في إضافة السؤال', [
+                'error' => $e->getMessage(),
+            ]);
 
             return response()->json([
                 'success' => false,
@@ -280,18 +212,117 @@ class QuestionController extends Controller
             ], 500);
         }
     }
-    // في QuestionController.php
+
+    /**
+     * إضافة عدة أسئلة بنفس السعر والموقع
+     */
+    public function storeMultiple(Request $request): JsonResponse
+    {
+        if (!$request->user()->is_asker) {
+            return response()->json([
+                'success' => false,
+                'message' => 'إضافة الأسئلة متاحة للسائلين فقط',
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'questions' => 'required|array|min:1|max:20',
+            'questions.*' => 'required|string|max:1000',
+            'price' => 'required|numeric|min:0|max:999999.99',
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
+        ]);
+
+        try {
+            $user = $request->user();
+
+            // البحث عن الموقع أو إنشاء واحد جديد
+            $existingLocation = $user->locations()
+                ->whereBetween('latitude', [
+                    $validated['latitude'] - 0.0001,
+                    $validated['latitude'] + 0.0001
+                ])
+                ->whereBetween('longitude', [
+                    $validated['longitude'] - 0.0001,
+                    $validated['longitude'] + 0.0001
+                ])
+                ->first();
+
+            if ($existingLocation) {
+                $location = $existingLocation;
+                $user->locations()->update(['is_current' => false]);
+                $location->update(['is_current' => true]);
+            } else {
+                $user->locations()->update(['is_current' => false]);
+                $location = $user->locations()->create([
+                    'latitude' => $validated['latitude'],
+                    'longitude' => $validated['longitude'],
+                    'is_current' => true,
+                ]);
+            }
+
+            // إنشاء الأسئلة
+            $createdQuestions = [];
+            foreach ($validated['questions'] as $questionText) {
+                $question = $user->questions()->create([
+                    'location_id' => $location->id,
+                    'question' => $questionText,
+                    'price' => $validated['price'],
+                    'is_active' => true,
+                ]);
+
+                $createdQuestions[] = [
+                    'id' => $question->id,
+                    'question' => $question->question,
+                    'price' => $question->price,
+                    'is_active' => $question->is_active,
+                    'created_at' => $question->created_at->format('Y-m-d H:i:s'),
+                ];
+            }
+
+            Log::info('✅ أسئلة متعددة تم إضافتها', [
+                'count' => count($createdQuestions),
+                'user_id' => $user->id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'تم إضافة ' . count($createdQuestions) . ' أسئلة بنجاح',
+                'data' => [
+                    'questions' => $createdQuestions,
+                    'location' => [
+                        'latitude' => $location->latitude,
+                        'longitude' => $location->longitude,
+                    ],
+                    'price' => $validated['price'],
+                    'total_created' => count($createdQuestions),
+                ]
+            ], 201);
+
+        } catch (\Exception $e) {
+            Log::error('❌ خطأ في إضافة الأسئلة', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'حدث خطأ أثناء إضافة الأسئلة',
+            ], 500);
+        }
+    }
+
+    /**
+     * عرض سؤال معين (مع تسجيل المشاهدة للمجيب)
+     */
     public function show(Request $request, $id): JsonResponse
     {
         try {
             $viewer = $request->user();
 
-            // ✅ البحث عن السؤال مع التحقق من وجود العلاقات
             $question = UserQuestion::with(['user', 'location'])
                 ->withCount('views')
                 ->find($id);
 
-            // ✅ التحقق من وجود السؤال
             if (!$question) {
                 return response()->json([
                     'success' => false,
@@ -299,14 +330,7 @@ class QuestionController extends Controller
                 ], 404);
             }
 
-            // ✅ التحقق من وجود المستخدم والموقع
             if (!$question->user || !$question->location) {
-                Log::error('بيانات السؤال غير مكتملة', [
-                    'question_id' => $id,
-                    'has_user' => !is_null($question->user),
-                    'has_location' => !is_null($question->location),
-                ]);
-
                 return response()->json([
                     'success' => false,
                     'message' => 'بيانات السؤال غير مكتملة',
@@ -315,7 +339,7 @@ class QuestionController extends Controller
 
             $isNewView = false;
 
-            // ✅ تسجيل المشاهدة فقط للمجيبين
+            // تسجيل المشاهدة للمجيبين فقط
             if (!$viewer->is_asker && $viewer->id !== $question->user_id) {
                 $view = QuestionView::firstOrCreate(
                     [
@@ -331,11 +355,6 @@ class QuestionController extends Controller
                 $isNewView = $view->wasRecentlyCreated;
 
                 if ($isNewView) {
-                    Log::info('✅ تم تسجيل مشاهدة جديدة', [
-                        'question_id' => $question->id,
-                        'viewer_id' => $viewer->id,
-                    ]);
-
                     $question->loadCount('views');
                 }
             }
@@ -356,23 +375,18 @@ class QuestionController extends Controller
                             'phone' => $question->user->phone ?? null,
                         ],
                         'location' => [
-                            'id' => $question->location->id,
-                            'title' => $question->location->title,
-                            'latitude' => $question->location->latitude ?? null,
-                            'longitude' => $question->location->longitude ?? null,
-                            'address' => $question->location->address ?? null,
+                            'latitude' => $question->location->latitude,
+                            'longitude' => $question->location->longitude,
                         ],
                         'created_at' => $question->created_at->format('Y-m-d H:i:s'),
                     ]
                 ]
             ], 200);
+
         } catch (\Exception $e) {
             Log::error('❌ خطأ في عرض السؤال', [
                 'error' => $e->getMessage(),
-                'line' => $e->getLine(),
-                'file' => $e->getFile(),
                 'question_id' => $id,
-                'user_id' => $request->user()->id,
             ]);
 
             return response()->json([
@@ -383,7 +397,7 @@ class QuestionController extends Controller
     }
 
     /**
-     * تحديث سؤال (للسائل فقط)
+     * تحديث سؤال
      */
     public function update(Request $request, $id): JsonResponse
     {
@@ -409,8 +423,6 @@ class QuestionController extends Controller
                 'is_active' => $validated['is_active'] ?? $question->is_active,
             ]));
 
-            Log::info('✅ Question updated: ' . $question->id);
-
             return response()->json([
                 'success' => true,
                 'message' => 'تم تحديث السؤال بنجاح',
@@ -424,6 +436,7 @@ class QuestionController extends Controller
                     ]
                 ]
             ], 200);
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -433,7 +446,7 @@ class QuestionController extends Controller
     }
 
     /**
-     * حذف سؤال (للسائل فقط)
+     * حذف سؤال
      */
     public function destroy(Request $request, $id): JsonResponse
     {
@@ -448,12 +461,11 @@ class QuestionController extends Controller
             $question = $request->user()->questions()->findOrFail($id);
             $question->delete();
 
-            Log::info('✅ Question deleted: ' . $id);
-
             return response()->json([
                 'success' => true,
                 'message' => 'تم حذف السؤال بنجاح',
             ], 200);
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -463,7 +475,7 @@ class QuestionController extends Controller
     }
 
     /**
-     * حذف جميع الأسئلة (للسائل فقط)
+     * حذف جميع الأسئلة
      */
     public function destroyAll(Request $request): JsonResponse
     {
@@ -478,16 +490,13 @@ class QuestionController extends Controller
             $count = $request->user()->questions()->count();
             $request->user()->questions()->delete();
 
-            Log::info("✅ All questions deleted for asker: {$request->user()->id}, count: {$count}");
-
             return response()->json([
                 'success' => true,
                 'message' => "تم حذف جميع الأسئلة ({$count}) بنجاح",
                 'deleted_count' => $count,
             ], 200);
-        } catch (\Exception $e) {
-            Log::error('❌ Error deleting all questions: ' . $e->getMessage());
 
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'حدث خطأ أثناء حذف الأسئلة',
@@ -496,15 +505,13 @@ class QuestionController extends Controller
     }
 
     /**
-     * جلب أسئلة السائلين القريبين (للمجيبين فقط)
-     * ✅ للمجيبين فقط
+     * الأسئلة القريبة (للمجيبين)
      */
     public function getNearbyQuestions(Request $request): JsonResponse
     {
         try {
             $user = $request->user();
 
-            // ✅ التحقق: المستخدم لازم يكون مجيب
             if ($user->is_asker) {
                 return response()->json([
                     'success' => false,
@@ -512,11 +519,11 @@ class QuestionController extends Controller
                 ], 403);
             }
 
-            // الحصول على الموقع الحالي
-            $myLocation = $user->locations()->where('is_default', true)->first();
+            // الموقع الحالي للمجيب
+            $myLocation = $user->locations()->where('is_current', true)->first();
 
             if (!$myLocation) {
-                $myLocation = $user->locations()->first();
+                $myLocation = $user->locations()->latest()->first();
             }
 
             if (!$myLocation) {
@@ -526,11 +533,11 @@ class QuestionController extends Controller
                 ], 400);
             }
 
-            $maxDistance = 1; // كيلومتر واحد
+            $maxDistance = 1; // كيلومتر
 
-            // البحث عن مواقع السائلين القريبين
+            // البحث عن أسئلة قريبة
             $nearbyLocations = UserLocation::with(['user' => function ($query) {
-                $query->where('is_asker', true);  // السائلين فقط
+                $query->where('is_asker', true);
             }, 'questions' => function ($query) {
                 $query->where('is_active', true)->withCount('views');
             }])
@@ -541,7 +548,6 @@ class QuestionController extends Controller
                 ->nearby($myLocation->latitude, $myLocation->longitude, $maxDistance)
                 ->get();
 
-            // جمع الأسئلة من المواقع القريبة
             $nearbyQuestions = collect();
 
             foreach ($nearbyLocations as $location) {
@@ -554,28 +560,26 @@ class QuestionController extends Controller
 
                 if ($distance <= $maxDistance && $location->questions->isNotEmpty()) {
                     foreach ($location->questions as $question) {
-                        // ✅ التحقق: هل المجيب شاف السؤال قبل كده؟
                         $hasViewed = QuestionView::where('question_id', $question->id)
                             ->where('viewer_id', $user->id)
                             ->exists();
 
                         $nearbyQuestions->push([
-                            'question_id' => $question->id,
+                            'id' => $question->id,
                             'question' => $question->question,
                             'price' => $question->price,
                             'views_count' => $question->views_count,
-                            'has_viewed' => $hasViewed,  // علامة: شفت السؤال قبل كده؟
+                            'has_viewed' => $hasViewed,
                             'asker' => [
                                 'id' => $location->user->id,
                                 'name' => $location->user->name,
                                 'phone' => $location->user->phone,
                             ],
                             'location' => [
-                                'title' => $location->title,
-                                'address' => $location->address,
+                                'latitude' => $location->latitude,
+                                'longitude' => $location->longitude,
                             ],
                             'distance_km' => round($distance, 3),
-                            'distance_meters' => round($distance * 1000),
                             'created_at' => $question->created_at->format('Y-m-d H:i:s'),
                         ]);
                     }
@@ -590,15 +594,17 @@ class QuestionController extends Controller
                     'my_location' => [
                         'latitude' => $myLocation->latitude,
                         'longitude' => $myLocation->longitude,
-                        'address' => $myLocation->address,
                     ],
                     'max_distance_km' => $maxDistance,
                     'questions' => $nearbyQuestions,
                     'total' => $nearbyQuestions->count(),
                 ]
             ], 200);
+
         } catch (\Exception $e) {
-            Log::error('❌ Error getting nearby questions: ' . $e->getMessage());
+            Log::error('❌ خطأ في الأسئلة القريبة', [
+                'error' => $e->getMessage(),
+            ]);
 
             return response()->json([
                 'success' => false,
@@ -608,7 +614,7 @@ class QuestionController extends Controller
     }
 
     /**
-     * عرض مشاهدات سؤال معين (للسائل صاحب السؤال فقط)
+     * مشاهدات سؤال معين
      */
     public function getViews(Request $request, $id): JsonResponse
     {
@@ -643,12 +649,13 @@ class QuestionController extends Controller
                                 'name' => $view->viewer->name,
                                 'phone' => $view->viewer->phone,
                             ],
-                            'viewed_at' => \Carbon\Carbon::parse($view->view_at)->format('Y-m-d H:i:s'),
+                            'viewed_at' => \Carbon\Carbon::parse($view->viewed_at)->format('Y-m-d H:i:s'),
                         ];
                     }),
                     'total_views' => $question->views_count,
                 ]
             ], 200);
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

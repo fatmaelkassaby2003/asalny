@@ -22,6 +22,8 @@ class User extends Authenticatable implements FilamentUser
         'password',
         'is_asker',
         'is_active',
+        'description',
+        'wallet_balance',
     ];
 
     protected $hidden = [
@@ -35,6 +37,7 @@ class User extends Authenticatable implements FilamentUser
         'is_asker' => 'boolean',
         'is_active' => 'boolean',
         'viewed_at' => 'datetime',
+        'wallet_balance' => 'decimal:2',
     ];
 
     public function canAccessFilament(): bool

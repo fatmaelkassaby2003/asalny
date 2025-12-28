@@ -46,12 +46,13 @@ class OrderController extends Controller
                             'price' => $order->price,
                             'response_time' => $order->response_time,
                             'remaining_minutes' => $order->remaining_time,
-                            'expires_at' => $order->expires_at->format('Y-m-d H:i:s'),
+                            'expires_at' => \Carbon\Carbon::parse($order->expires_at)->format('Y-m-d H:i'),
                             'answered_at' => $order->answered_at ? $order->answered_at->format('Y-m-d H:i:s') : null,
                             'question' => [
                                 'id' => $order->question->id,
                                 'question' => $order->question->question,
                             ],
+                    
                             'asker' => [
                                 'id' => $order->asker->id,
                                 'name' => $order->asker->name,
@@ -81,13 +82,14 @@ class OrderController extends Controller
 
     /**
      * الإجابة على طلب (للمجيب فقط)
+     * يتضمن فحص رصيد السائل وحجز المبلغ
      */
     public function answerOrder(Request $request, $orderId): JsonResponse
     {
         try {
             $answerer = $request->user();
 
-            $order = Order::find($orderId);
+            $order = Order::with(['asker', 'question'])->find($orderId);
 
             if (!$order) {
                 return response()->json([
@@ -138,6 +140,33 @@ class OrderController extends Controller
                 ], 422);
             }
 
+            // ✅ التحقق من رصيد السائل قبل الإجابة
+            $walletService = app(\App\Services\WalletService::class);
+            $asker = $order->asker;
+            $currentBalance = $walletService->getBalance($asker);
+            
+            if ($currentBalance < $order->price) {
+                $shortage = $order->price - $currentBalance;
+                
+                Log::warning('❌ رصيد المحفظة غير كافي للسائل', [
+                    'asker_id' => $asker->id,
+                    'current_balance' => $currentBalance,
+                    'required_amount' => $order->price,
+                    'shortage' => $shortage,
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'رصيد السائل غير كافي لإتمام الطلب',
+                    'data' => [
+                        'current_balance' => $currentBalance,
+                        'required_amount' => $order->price,
+                        'shortage' => $shortage,
+                        'note' => 'يرجى إبلاغ السائل بشحن المحفظة',
+                    ]
+                ], 402); // 402 Payment Required
+            }
+
             $answerData = [
                 'answer_text' => $request->answer_text,
                 'status' => 'answered',
@@ -153,21 +182,69 @@ class OrderController extends Controller
 
             $order->update($answerData);
 
-            Log::info('✅ تم الإجابة على الطلب', [
+            // ✅ حجز المبلغ من محفظة السائل
+            try {
+                $transaction = $walletService->holdAmount($asker, $order, $order->price);
+                
+                Log::info('✅ تم حجز المبلغ من محفظة السائل', [
+                    'asker_id' => $asker->id,
+                    'order_id' => $order->id,
+                    'amount' => $order->price,
+                    'balance_after' => $transaction->balance_after,
+                ]);
+                
+            } catch (\Exception $e) {
+                // إذا فشل حجز المبلغ، إلغاء الإجابة
+                $order->update([
+                    'answer_text' => null,
+                    'answer_image' => null,
+                    'status' => 'pending',
+                    'answered_at' => null,
+                ]);
+                
+                Log::error('❌ فشل حجز المبلغ بعد الإجابة', [
+                    'error' => $e->getMessage(),
+                    'order_id' => $order->id,
+                ]);
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'فشل حجز المبلغ من محفظة السائل',
+                    'error' => $e->getMessage(),
+                ], 500);
+            }
+
+            Log::info('✅ تم الإجابة على الطلب وحجز المبلغ', [
                 'order_id' => $order->id,
                 'answerer_id' => $answerer->id,
+                'amount_held' => $order->price,
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'تم إرسال الإجابة بنجاح',
+                'message' => 'تم إرسال الإجابة وحجز المبلغ بنجاح',
                 'data' => [
+                    'question' => [
+                        'id' => $order->question->id,
+                        'question' => $order->question->question,
+                        'price' => $order->question->price,
+                    ],
                     'order' => [
                         'id' => $order->id,
                         'status' => $order->status,
+                        'price' => $order->price,
                         'answer_text' => $order->answer_text,
                         'answer_image' => $order->answer_image ? Storage::url($order->answer_image) : null,
                         'answered_at' => $order->answered_at->format('Y-m-d H:i:s'),
+                        'response_time' => $order->response_time,
+                        'expires_at' => $order->expires_at->format('Y-m-d H:i:s'),
+                        'remaining_minutes' => $order->remaining_time,
+                        'held_amount' => $order->held_amount,
+                    ],
+                    'wallet' => [
+                        'asker_balance_before' => $transaction->balance_before,
+                        'asker_balance_after' => $transaction->balance_after,
+                        'amount_held' => $order->price,
                     ]
                 ]
             ], 200);
@@ -338,6 +415,103 @@ class OrderController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'حدث خطأ أثناء عرض السؤال',
+            ], 500);
+        }
+    }
+
+    /**
+     * متابعة الإجابة - للسائل (يتحقق من الرصيد ويعرض تفاصيل الطلب)
+     */
+    public function followAnswer(Request $request, $orderId): JsonResponse
+    {
+        try {
+            $asker = $request->user();
+
+            $order = Order::with(['question', 'answerer'])->find($orderId);
+
+            if (!$order) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'الطلب غير موجود',
+                ], 404);
+            }
+
+            if ($order->asker_id !== $asker->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'غير مصرح لك بمتابعة هذا الطلب',
+                ], 403);
+            }
+
+            // ✅ التحقق من رصيد المحفظة
+            $walletService = app(\App\Services\WalletService::class);
+            $currentBalance = $walletService->getBalance($asker);
+            
+            if ($currentBalance < $order->price) {
+                $shortage = $order->price - $currentBalance;
+                
+                Log::warning('❌ رصيد المحفظة غير كافي للمتابعة', [
+                    'asker_id' => $asker->id,
+                    'current_balance' => $currentBalance,
+                    'required_amount' => $order->price,
+                    'shortage' => $shortage,
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'رصيد المحفظة غير كافي',
+                    'data' => [
+                        'current_balance' => $currentBalance,
+                        'required_amount' => $order->price,
+                        'shortage' => $shortage,
+                        'action_required' => 'يرجى شحن المحفظة لمتابعة الإجابة',
+                    ]
+                ], 402); // 402 Payment Required
+            }
+
+            // تحديث حالة الطلبات المنتهية
+            Order::updateExpiredOrders();
+            $order->refresh();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'بيانات متابعة الإجابة',
+                'data' => [
+                    'wallet_balance' => $currentBalance,
+                    'question' => [
+                        'id' => $order->question->id,
+                        'question' => $order->question->question,
+                        'price' => $order->question->price,
+                    ],
+                    'order' => [
+                        'id' => $order->id,
+                        'status' => $order->status,
+                        'price' => $order->price,
+                        'response_time' => $order->response_time,
+                        'expires_at' => \Carbon\Carbon::parse($order->expires_at)->format('Y-m-d H:i:s'),
+                        'remaining_minutes' => $order->remaining_time,
+                        'held_amount' => $order->held_amount,
+                        'answer_text' => $order->answer_text,
+                        'answer_image' => $order->answer_image ? Storage::url($order->answer_image) : null,
+                        'answered_at' => $order->answered_at ? \Carbon\Carbon::parse($order->answered_at)->format('Y-m-d H:i:s') : null,
+                    ],
+                    'answerer' => [
+                        'id' => $order->answerer->id,
+                        'name' => $order->answerer->name,
+                        'phone' => $order->answerer->phone,
+                    ]
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('❌ خطأ في متابعة الإجابة', [
+                'error' => $e->getMessage(),
+                'order_id' => $orderId,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'حدث خطأ أثناء متابعة الإجابة',
             ], 500);
         }
     }
