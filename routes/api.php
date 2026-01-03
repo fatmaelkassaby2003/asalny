@@ -137,8 +137,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{orderId}/cancel', [OrderController::class, 'cancelOrder']); // إلغاء طلب
         Route::get('/{orderId}/follow', [OrderController::class, 'followAnswer']); // متابعة الإجابة
         Route::post('/{orderId}/approve', [OrderController::class, 'approveAnswer']); // اعتماد الإجابة
-        Route::post('/{orderId}/dispute', [OrderController::class, 'disputeAnswer']); // الاعتراض على الإجابة
     });
+    
+    // Disputes via Chat
+    Route::post('/chats/{chatId}/dispute', [OrderController::class, 'disputeViaChat']); // الاعتراض عن طريق الشات
+
     Route::get('/asker/questions', [OrderController::class, 'askerQuestions']);
     Route::get('/asker/questions/{questionId}', [OrderController::class, 'showQuestionWithStatus']);
 

@@ -279,6 +279,14 @@ class ChatController extends Controller
                 ], 403);
             }
 
+            // ✅ منع الإرسال إذا كان الطلب قيد المراجعة (اعتراض ثاني)
+            if ($chat->order && ($chat->order->status === 'under_review' || $chat->order->dispute_count >= 2)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'عذراً، تم إغلاق الشات لأن الطلب قيد مراجعة الإدارة',
+                ], 403);
+            }
+
             $validator = Validator::make($request->all(), [
                 'message' => 'required|string|max:2000',
             ], [

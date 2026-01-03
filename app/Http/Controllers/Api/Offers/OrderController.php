@@ -631,134 +631,181 @@ class OrderController extends Controller
     /**
      * الاعتراض على الإجابة (للسائل فقط)
      */
-    public function disputeAnswer(Request $request, $orderId): JsonResponse
+    /**
+     * الاعتراض (للسائل فقط) باستخدام Chat ID
+     * @param Request $request
+     * @param int $chatId
+     * @return JsonResponse
+     */
+    public function disputeViaChat(Request $request, $chatId): JsonResponse
     {
         try {
-            $asker = $request->user();
+            $user = $request->user();
 
-            $order = Order::with(['answerer', 'asker', 'chat'])->find($orderId);
+            // 1. جلب المحادثة
+            $chat = \App\Models\Chat::with('order')->find($chatId);
+
+            if (!$chat) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'المحادثة غير موجودة',
+                ], 404);
+            }
+
+            // 2. التحقق من المشاركة
+            if (!$chat->isParticipant($user->id)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'غير مصرح لك بالوصول لهذه المحادثة',
+                ], 403);
+            }
+
+            // 3. جلب الطلب المرتبط
+            $order = $chat->order;
 
             if (!$order) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'الطلب غير موجود',
+                    'message' => 'هذه المحادثة غير مرتبطة بطلب نشط',
                 ], 404);
             }
 
-            if ($order->asker_id !== $asker->id) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'غير مصرح لك بالاعتراض على هذا الطلب',
-                ], 403);
-            }
+            // 4. استدعاء دالة الاعتراض الأساسية باستخدام Order ID
+            // لاحظ: نمرر الطلب مباشرة أو نستدعي الدالة. 
+            // للأمان والتكرار، سنعيد استخدام المنطق.
+            // لكن بما أن الـ logic طويل، سنعيد توجيهه.
+            
+            return $this->processDispute($request, $user, $order, $chat);
 
-            if (!in_array($order->status, ['answered', 'disputed'])) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'لا يمكن الاعتراض على طلب ' . $order->status,
-                ], 400);
-            }
-
-            // Validation
-            $validator = Validator::make($request->all(), [
-                'reason' => 'required|string|max:500',
-            ], [
-                'reason.required' => 'سبب الاعتراض مطلوب',
-                'reason.max' => 'سبب الاعتراض لا يمكن أن يتجاوز 500 حرف',
+        } catch (\Exception $e) {
+            Log::error('❌ خطأ في disputeViaChat', [
+                'error' => $e->getMessage(),
+                'chat_id' => $chatId,
             ]);
 
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'بيانات غير صحيحة',
-                    'errors' => $validator->errors(),
-                ], 422);
-            }
+            return response()->json([
+                'success' => false,
+                'message' => 'حدث خطأ أثناء معالجة الاعتراض',
+            ], 500);
+        }
+    }
 
-            // زيادة عداد الاعتراضات
-            $disputeCount = $order->dispute_count + 1;
+    /**
+     * معالجة منطق الاعتراض (مستخرج للاستخدام المشترك)
+     */
+    private function processDispute(Request $request, $user, $order, $chat = null)
+    {
+        if ($order->asker_id !== $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'غير مصرح لك بالاعتراض على هذا الطلب',
+            ], 403);
+        }
 
-            // ✅ اعتراض أول → فتح Chat
-            if ($disputeCount === 1) {
-                // إنشاء/جلب Chat
+        if (!in_array($order->status, ['answered', 'disputed'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'لا يمكن الاعتراض على طلب ' . $order->status,
+            ], 400);
+        }
+
+        // Validation
+        $validator = Validator::make($request->all(), [
+            'reason' => 'required|string|max:500',
+        ], [
+            'reason.required' => 'سبب الاعتراض مطلوب',
+            'reason.max' => 'سبب الاعتراض لا يمكن أن يتجاوز 500 حرف',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'بيانات غير صحيحة',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        // زيادة عداد الاعتراضات
+        $disputeCount = $order->dispute_count + 1;
+
+        // ✅ اعتراض أول
+        if ($disputeCount === 1) {
+            // إذا لم يكن الشات موجوداً (في حالة الاستدعاء المباشر وليس عبر الشات)، ننشئه
+            if (!$chat) {
                 $chat = \App\Models\Chat::firstOrCreate([
                     'order_id' => $order->id,
                 ], [
                     'asker_id' => $order->asker_id,
                     'answerer_id' => $order->answerer_id,
                 ]);
-
-                // تحديث Order
-                $order->update([
-                    'dispute_count' => $disputeCount,
-                    'dispute_reason' => $request->reason,
-                    'status' => 'disputed',
-                    'disputed_at' => now(),
-                ]);
-
-                Log::info('✅ اعتراض أول - تم فتح Chat', [
-                    'order_id' => $order->id,
-                    'chat_id' => $chat->id,
-                    'reason' => $request->reason,
-                ]);
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'تم تسجيل اعتراضك. يمكنك التواصل مع المجيب',
-                    'data' => [
-                        'dispute_count' => $disputeCount,
-                        'status' => $order->status,
-                        'chat' => [
-                            'id' => $chat->id,
-                            'order_id' => $order->id,
-                            'other_participant' => [
-                                'id' => $order->answerer->id,
-                                'name' => $order->answerer->name,
-                                'phone' => $order->answerer->phone,
-                            ]
-                        ]
-                    ]
-                ], 200);
             }
 
-            // ❌ اعتراض ثاني → تصعيد للأدمن
-            if ($disputeCount >= 2) {
-                $order->update([
-                    'dispute_count' => $disputeCount,
-                    'dispute_reason' => $request->reason,
-                    'status' => 'under_review',
-                    'escalated_at' => now(),
-                ]);
+            // تحديث Order
+            $order->update([
+                'dispute_count' => $disputeCount,
+                'dispute_reason' => $request->reason,
+                'status' => 'disputed',
+                'disputed_at' => now(),
+            ]);
 
-                Log::warning('⚠️ اعتراض ثاني - تصعيد للأدمن', [
-                    'order_id' => $order->id,
-                    'dispute_count' => $disputeCount,
-                    'reason' => $request->reason,
-                ]);
-
-                // TODO: إرسال إشعار للأدمن
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'تم تصعيد الاعتراض للإدارة للمراجعة',
-                    'data' => [
-                        'dispute_count' => $disputeCount,
-                        'status' => $order->status,
-                        'escalated_at' => $order->escalated_at->format('Y-m-d H:i:s'),
-                    ]
-                ], 200);
-            }
-
-        } catch (\Exception $e) {
-            Log::error('❌ خطأ في الاعتراض', [
-                'error' => $e->getMessage(),
-                'order_id' => $orderId,
+            Log::info('✅ اعتراض أول', [
+                'order_id' => $order->id,
+                'chat_id' => $chat->id,
+                'reason' => $request->reason,
             ]);
 
             return response()->json([
-                'success' => false,
-                'message' => 'حدث خطأ أثناء تسجيل الاعتراض',
-            ], 500);
+                'success' => true,
+                'message' => 'تم تسجيل اعتراضك. يمكنك التواصل مع المجيب',
+                'data' => [
+                    'dispute_count' => $disputeCount,
+                    'status' => $order->status,
+                    'chat' => [
+                        'id' => $chat->id,
+                        'order_id' => $order->id,
+                        'other_participant' => [
+                            'id' => $order->answerer->id,
+                            'name' => $order->answerer->name,
+                            'phone' => $order->answerer->phone,
+                        ]
+                    ]
+                ]
+            ], 200);
+        }
+
+        // ❌ اعتراض ثاني → تصعيد للأدمن
+        if ($disputeCount >= 2) {
+            $order->update([
+                'dispute_count' => $disputeCount,
+                'dispute_reason' => $request->reason,
+                'status' => 'under_review',
+                'escalated_at' => now(),
+            ]);
+
+            Log::warning('⚠️ اعتراض ثاني - تصعيد للأدمن', [
+                'order_id' => $order->id,
+                'dispute_count' => $disputeCount,
+                'reason' => $request->reason,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'تم تصعيد الاعتراض للإدارة للمراجعة (تم إغلاق الشات)', 
+                'data' => [
+                    'dispute_count' => $disputeCount,
+                    'status' => $order->status,
+                    'escalated_at' => $order->escalated_at->format('Y-m-d H:i:s'),
+                    'chat' => ($chat ?? $order->chat) ? [
+                        'id' => ($chat ?? $order->chat)->id,
+                        'order_id' => $order->id,
+                        'other_participant' => [
+                            'id' => $order->answerer->id,
+                            'name' => $order->answerer->name,
+                            'phone' => $order->answerer->phone,
+                        ]
+                    ] : null,
+                ]
+            ], 200);
         }
     }
 }
