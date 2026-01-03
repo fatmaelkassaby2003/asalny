@@ -134,13 +134,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('orders')->group(function () {
         Route::get('/answerer', [OrderController::class, 'answererOrders']); // عرض طلبات المجيب
         Route::post('/answer', [OrderController::class, 'answerOrder']); // الإجابة على طلب
-        Route::post('/{orderId}/cancel', [OrderController::class, 'cancelOrder']); // إلغاء طلب
+        Route::post('/cancel', [OrderController::class, 'cancelOrder']); // إلغاء طلب
         Route::get('/{orderId}/follow', [OrderController::class, 'followAnswer']); // متابعة الإجابة
-        Route::post('/{orderId}/approve', [OrderController::class, 'approveAnswer']); // اعتماد الإجابة
+        Route::post('/approve', [OrderController::class, 'approveAnswer']); // اعتماد الإجابة
     });
     
     // Disputes via Chat
-    Route::post('/chats/{chatId}/dispute', [OrderController::class, 'disputeViaChat']); // الاعتراض عن طريق الشات
+    Route::post('/chats/dispute', [OrderController::class, 'disputeViaChat']); // الاعتراض عن طريق الشات
 
     Route::get('/asker/questions', [OrderController::class, 'askerQuestions']);
     Route::get('/asker/questions/{questionId}', [OrderController::class, 'showQuestionWithStatus']);

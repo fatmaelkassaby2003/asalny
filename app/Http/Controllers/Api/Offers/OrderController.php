@@ -274,10 +274,18 @@ class OrderController extends Controller
     /**
      * إلغاء طلب (للسائل فقط)
      */
-    public function cancelOrder(Request $request, $orderId): JsonResponse
+    public function cancelOrder(Request $request): JsonResponse
     {
         try {
             $asker = $request->user();
+            $orderId = $request->input('order_id');
+
+            if (!$orderId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'معرف الطلب مطلوب (order_id)',
+                ], 422);
+            }
 
             $order = Order::find($orderId);
 
@@ -529,10 +537,18 @@ class OrderController extends Controller
     /**
      * اعتماد الإجابة وتحويل الفلوس (للسائل فقط)
      */
-    public function approveAnswer(Request $request, $orderId): JsonResponse
+    public function approveAnswer(Request $request): JsonResponse
     {
         try {
             $asker = $request->user();
+            $orderId = $request->input('order_id');
+
+            if (!$orderId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'معرف الطلب مطلوب (order_id)',
+                ], 422);
+            }
 
             $order = Order::with(['answerer', 'asker'])->find($orderId);
 
@@ -637,10 +653,23 @@ class OrderController extends Controller
      * @param int $chatId
      * @return JsonResponse
      */
-    public function disputeViaChat(Request $request, $chatId): JsonResponse
+    /**
+     * الاعتراض (للسائل فقط) باستخدام Chat ID
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function disputeViaChat(Request $request): JsonResponse
     {
         try {
             $user = $request->user();
+            $chatId = $request->input('chat_id');
+
+            if (!$chatId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'معرف المحادثة مطلوب (chat_id)',
+                ], 422);
+            }
 
             // 1. جلب المحادثة
             $chat = \App\Models\Chat::with('order')->find($chatId);
