@@ -14,7 +14,7 @@ class UserQuestion extends Model
     protected $fillable = [
         'user_id',
         'location_id',
-        'question',
+        'question', // يقبل string أو JSON array
         'price',
         'is_active',
     ];
@@ -22,6 +22,7 @@ class UserQuestion extends Model
     protected function casts(): array
     {
         return [
+            // question يقبل string عادي أو JSON array
             'price' => 'decimal:2',
             'is_active' => 'boolean',
         ];

@@ -92,13 +92,25 @@ class ChatController extends Controller
     {
         try {
             $user = $request->user();
+            $unreadOnly = $request->query('unread_only', false);
 
-            $chats = Chat::with(['asker', 'answerer', 'lastMessage.sender', 'order'])
-                ->where(function ($query) use ($user) {
-                    $query->where('asker_id', $user->id)
+            $query = Chat::with(['asker', 'answerer', 'lastMessage.sender', 'order'])
+                ->where(function ($q) use ($user) {
+                    $q->where('asker_id', $user->id)
                         ->orWhere('answerer_id', $user->id);
                 })
-                ->orderBy('last_message_at', 'desc')
+                // ✅ Eager load unread count to avoid N+1 problem
+                ->withCount(['messages as unread_count' => function ($q) use ($user) {
+                    $q->where('sender_id', '!=', $user->id)
+                      ->where('is_read', false);
+                }]);
+
+            // ✅ الفلترة حسب المحادثات غير المقروءة فقط
+            if ($unreadOnly) {
+                $query->having('unread_count', '>', 0);
+            }
+
+            $chats = $query->orderBy('last_message_at', 'desc')
                 ->orderBy('created_at', 'desc')
                 ->get()
                 ->map(function ($chat) use ($user) {
@@ -119,7 +131,8 @@ class ChatController extends Controller
                             'is_mine' => $lastMessage->sender_id === $user->id,
                             'created_at' => $lastMessage->created_at->format('Y-m-d H:i:s'),
                         ] : null,
-                        'unread_count' => $chat->unreadCountFor($user->id),
+                        'unread_count' => $chat->unread_count, // From withCount
+                        'has_unread_messages' => $chat->unread_count > 0, // ✅ تمييز المحادثات غير المقروءة
                         'last_message_at' => $chat->last_message_at ? \Carbon\Carbon::parse($chat->last_message_at)->format('Y-m-d H:i:s') : null,
                         'created_at' => $chat->created_at->format('Y-m-d H:i:s'),
                     ];
@@ -130,7 +143,8 @@ class ChatController extends Controller
                 'data' => [
                     'chats' => $chats,
                     'total' => $chats->count(),
-                    'total_unread' => $chats->sum('unread_count'),
+                    'total_unread_conversations' => $chats->where('has_unread_messages', true)->count(),
+                    'total_unread_messages' => $chats->sum('unread_count'),
                 ]
             ], 200);
 

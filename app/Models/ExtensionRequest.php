@@ -53,8 +53,9 @@ class ExtensionRequest extends Model
         ]);
 
         // تمديد مدة الطلب
+        $currentExpiry = \Carbon\Carbon::parse($this->order->expires_at);
         $this->order->update([
-            'expires_at' => $this->order->expires_at->addMinutes($this->additional_minutes),
+            'expires_at' => $currentExpiry->addMinutes($this->additional_minutes),
         ]);
     }
 

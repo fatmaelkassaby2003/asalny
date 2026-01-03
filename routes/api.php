@@ -130,15 +130,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/handle', [OfferController::class, 'handleOffer']); // قبول أو رفض عرض
     });
 
-    // الطلبات
+    // Orders Routes (معالجة العروض)
     Route::prefix('orders')->group(function () {
-        Route::get('/answerer', [OrderController::class, 'answererOrders']);
-        Route::post('/answer', [OrderController::class, 'answerOrder']);
-        Route::get('/{orderId}/follow', [OrderController::class, 'followAnswer']); // متابعة الإجابة للسائل
-        Route::post('/cancel', [OrderController::class, 'cancelOrder']);
-        Route::get('/asker/questions', [OrderController::class, 'askerQuestions']);
-        Route::get('/asker/questions/{questionId}', [OrderController::class, 'showQuestionWithStatus']);
+        Route::get('/answerer', [OrderController::class, 'answererOrders']); // عرض طلبات المجيب
+        Route::post('/answer', [OrderController::class, 'answerOrder']); // الإجابة على طلب
+        Route::post('/{orderId}/cancel', [OrderController::class, 'cancelOrder']); // إلغاء طلب
+        Route::get('/{orderId}/follow', [OrderController::class, 'followAnswer']); // متابعة الإجابة
+        Route::post('/{orderId}/approve', [OrderController::class, 'approveAnswer']); // اعتماد الإجابة
+        Route::post('/{orderId}/dispute', [OrderController::class, 'disputeAnswer']); // الاعتراض على الإجابة
     });
+    Route::get('/asker/questions', [OrderController::class, 'askerQuestions']);
+    Route::get('/asker/questions/{questionId}', [OrderController::class, 'showQuestionWithStatus']);
 
     // طلبات التمديد
     Route::prefix('extensions')->group(function () {

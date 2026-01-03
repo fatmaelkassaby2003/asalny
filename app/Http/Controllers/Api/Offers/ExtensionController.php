@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Carbon\Carbon;
 
 class ExtensionController extends Controller
 {
@@ -141,31 +142,35 @@ class ExtensionController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get();
 
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'extension_requests' => $extensionRequests->map(function ($request) {
-                        return [
-                            'id' => $request->id,
-                            'additional_minutes' => $request->additional_minutes,
-                            'reason' => $request->reason,
-                            'status' => $request->status,
-                            'order' => [
-                                'id' => $request->order->id,
-                                'question' => $request->order->question->question,
-                                'current_expires_at' => $request->order->expires_at->format('Y-m-d H:i:s'),
-                            ],
-                            'answerer' => [
-                                'id' => $request->answerer->id,
-                                'name' => $request->answerer->name,
-                            ],
-                            'created_at' => $request->created_at->format('Y-m-d H:i:s'),
-                        ];
-                    }),
-                    'total' => $extensionRequests->count(),
-                    'pending' => $extensionRequests->where('status', 'pending')->count(),
-                ]
-            ], 200);
+            $data = [
+            'extension_requests' => $extensionRequests->map(function ($extReq) {
+                return [
+                    'id' => $extReq->id,
+                    'order_id' => $extReq->order_id,
+                    'additional_minutes' => $extReq->additional_minutes,
+                    'reason' => $extReq->reason,
+                    'status' => $extReq->status,
+                    'created_at' => $extReq->created_at ? Carbon::parse($extReq->created_at)->format('Y-m-d H:i:s') : null,
+                    'responded_at' => $extReq->responded_at ? Carbon::parse($extReq->responded_at)->format('Y-m-d H:i:s') : null,
+                    'order' => [
+                        'id' => $extReq->order->id,
+                        'question' => $extReq->order->question->question,
+                        'current_expires_at' => Carbon::parse($extReq->order->expires_at)->format('Y-m-d H:i:s'),
+                    ],
+                    'answerer' => [
+                        'id' => $extReq->answerer->id,
+                        'name' => $extReq->answerer->name,
+                    ],
+                ];
+            })->values(),
+            'total' => $extensionRequests->count(),
+            'pending' => $extensionRequests->where('status', 'pending')->count(),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => $data,
+        ], 200);
 
         } catch (\Exception $e) {
             Log::error('❌ خطأ في عرض طلبات التمديد', [
@@ -245,7 +250,7 @@ class ExtensionController extends Controller
                     'data' => [
                         'order' => [
                             'id' => $extensionRequest->order->id,
-                            'new_expires_at' => $extensionRequest->order->fresh()->expires_at->format('Y-m-d H:i:s'),
+                            'new_expires_at' => Carbon::parse($extensionRequest->order->fresh()->expires_at)->format('Y-m-d H:i:s'),
                             'remaining_minutes' => $extensionRequest->order->fresh()->remaining_time,
                         ]
                     ]

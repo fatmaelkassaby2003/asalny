@@ -214,7 +214,8 @@ class QuestionController extends Controller
     }
 
     /**
-     * إضافة عدة أسئلة بنفس السعر والموقع
+     * إضافة عدة أسئلة بنفس السعر والموقع (JSON Array)
+     * السعر هو للمجموعة كلها، مش لكل سؤال
      */
     public function storeMultiple(Request $request): JsonResponse
     {
@@ -261,41 +262,38 @@ class QuestionController extends Controller
                 ]);
             }
 
-            // إنشاء الأسئلة
-            $createdQuestions = [];
-            foreach ($validated['questions'] as $questionText) {
-                $question = $user->questions()->create([
-                    'location_id' => $location->id,
-                    'question' => $questionText,
-                    'price' => $validated['price'],
-                    'is_active' => true,
-                ]);
+            // ✅ حفظ الأسئلة كـ JSON في column واحد
+            $question = $user->questions()->create([
+                'location_id' => $location->id,
+                'question' => json_encode($validated['questions'], JSON_UNESCAPED_UNICODE), // JSON
+                'price' => $validated['price'], // السعر للمجموعة كلها
+                'is_active' => true,
+            ]);
+            
+            // فك JSON للعرض
+            $questionsArray = json_decode($question->question, true);
 
-                $createdQuestions[] = [
-                    'id' => $question->id,
-                    'question' => $question->question,
-                    'price' => $question->price,
-                    'is_active' => $question->is_active,
-                    'created_at' => $question->created_at->format('Y-m-d H:i:s'),
-                ];
-            }
-
-            Log::info('✅ أسئلة متعددة تم إضافتها', [
-                'count' => count($createdQuestions),
+            Log::info('✅ أسئلة متعددة تم إضافتها (JSON)', [
+                'count' => count($questionsArray),
                 'user_id' => $user->id,
+                'question_id' => $question->id,
+                'total_price' => $validated['price'],
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'تم إضافة ' . count($createdQuestions) . ' أسئلة بنجاح',
+                'message' => 'تم إضافة ' . count($questionsArray) . ' أسئلة بنجاح',
                 'data' => [
-                    'questions' => $createdQuestions,
+                    'question_id' => $question->id,
+                    'questions' => $questionsArray,
+                    'question_count' => count($questionsArray),
                     'location' => [
                         'latitude' => $location->latitude,
                         'longitude' => $location->longitude,
                     ],
-                    'price' => $validated['price'],
-                    'total_created' => count($createdQuestions),
+                    'total_price' => $validated['price'],
+                    'price_per_question' => round($validated['price'] / count($questionsArray), 2),
+                    'created_at' => $question->created_at->format('Y-m-d H:i:s'),
                 ]
             ], 201);
 

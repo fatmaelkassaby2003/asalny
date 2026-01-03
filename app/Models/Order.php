@@ -23,6 +23,11 @@ class Order extends Model
         'answered_at',
         'cancelled_at',
         'expires_at',
+        'dispute_count',
+        'dispute_reason',
+        'approved_at',
+        'disputed_at',
+        'escalated_at',
     ];
 
     protected function casts(): array
@@ -33,6 +38,9 @@ class Order extends Model
             'answered_at' => 'datetime',
             'cancelled_at' => 'datetime',
             'expires_at' => 'datetime',
+            'approved_at' => 'datetime',
+            'disputed_at' => 'datetime',
+            'escalated_at' => 'datetime',
         ];
     }
 
@@ -57,6 +65,25 @@ class Order extends Model
     public function answerer()
     {
         return $this->belongsTo(User::class, 'answerer_id');
+    }
+
+    // طلبات التمديد
+    public function extensionRequests()
+    {
+        return $this->hasMany(ExtensionRequest::class, 'order_id');
+    }
+
+    public function pendingExtensionRequest()
+    {
+        return $this->hasOne(ExtensionRequest::class, 'order_id')
+            ->where('status', 'pending')
+            ->latest();
+    }
+
+    // المحادثة (Chat)
+    public function chat()
+    {
+        return $this->hasOne(Chat::class, 'order_id');
     }
 
     /**
