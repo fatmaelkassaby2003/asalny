@@ -1,0 +1,44 @@
+/* Dark Sidebar Theme */
+.fi-sidebar {
+    background-color: #111827 !important;
+    /* Dark Navy Background */
+    border-right-color: #1f2937 !important;
+}
+
+/* Sidebar Navigation Items Text */
+.fi-sidebar-item-label {
+    color: #e5e7eb !important;
+    /* Light Gray Text */
+}
+
+/* Sidebar Group Labels */
+.fi-sidebar-group-label {
+    color: #9ca3af !important;
+    /* Muted Gray for Headers */
+}
+
+/* Sidebar Icons */
+.fi-sidebar-item-icon {
+    color: #9ca3af !important;
+}
+
+/* Active State (Selected Item) */
+.fi-sidebar-item.fi-active>.fi-sidebar-item-button {
+    background-color: #3b82f6 !important;
+    /* Bright Blue Background */
+    color: #ffffff !important;
+}
+
+.fi-sidebar-item.fi-active>.fi-sidebar-item-button .fi-sidebar-item-label {
+    color: #ffffff !important;
+}
+
+.fi-sidebar-item.fi-active>.fi-sidebar-item-button .fi-sidebar-item-icon {
+    color: #ffffff !important;
+}
+
+/* Hover State */
+.fi-sidebar-item:not(.fi-active)>.fi-sidebar-item-button:hover {
+    background-color: #1f2937 !important;
+    /* Slightly lighter dark for hover */
+}

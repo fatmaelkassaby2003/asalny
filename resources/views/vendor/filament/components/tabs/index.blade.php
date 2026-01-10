@@ -1,9 +1,20 @@
+@props([
+    'contained' => false,
+    'label' => null,
+])
+
 <nav
     {{
-        $attributes->class([
-            'filament-tabs flex items-center space-x-1 overflow-x-auto rounded-xl bg-gray-500/5 p-1 text-sm text-gray-600 rtl:space-x-reverse',
-            'dark:bg-gray-500/20' => config('filament.dark_mode'),
-        ])
+        $attributes
+            ->merge([
+                'aria-label' => $label,
+                'role' => 'tablist',
+            ])
+            ->class([
+                'fi-tabs flex max-w-full gap-x-1 overflow-x-auto',
+                'fi-contained border-b border-gray-200 px-3 py-2.5 dark:border-white/10' => $contained,
+                'mx-auto rounded-xl bg-white p-2 shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10' => ! $contained,
+            ])
     }}
 >
     {{ $slot }}

@@ -207,88 +207,8 @@ class AuthController extends Controller
         }
     }
 
-    /**
-     * الحصول على بيانات المستخدم الحالي
-     */
-    public function me(Request $request): JsonResponse
-    {
-        return $this->successResponse(
-            null,
-            ['user' => $this->formatUserData($request->user())]
-        );
-    }
-
-    /**
-     * تحديث بيانات الملف الشخصي
-     */
-    public function updateProfile(Request $request): JsonResponse
-    {
-        try {
-            $user = $request->user();
-            
-            $validated = $request->validate([
-                'name' => 'nullable|string|max:255',
-                'email' => 'nullable|email|unique:users,email,' . $user->id,
-                'gender' => 'nullable|in:male,female',
-                'phone' => 'nullable|string|unique:users,phone,' . $user->id,
-                'is_asker' => 'nullable|boolean',
-                'description' => 'nullable|string|max:1000',
-            ], [
-                'name.max' => 'الاسم يجب ألا يتجاوز 255 حرف',
-                'email.email' => 'البريد الإلكتروني غير صالح',
-                'email.unique' => 'البريد الإلكتروني مستخدم من قبل',
-                'gender.in' => 'الجنس يجب أن يكون male أو female',
-                'phone.unique' => 'رقم الجوال مستخدم من قبل',
-                'is_asker.boolean' => 'نوع المستخدم يجب أن يكون true أو false',
-                'description.max' => 'الوصف يجب ألا يتجاوز 1000 حرف',
-            ]);
-
-            // تحديث description تلقائياً عند تغيير is_asker
-            if (isset($validated['is_asker']) && $validated['is_asker'] !== $user->is_asker) {
-                if (!isset($validated['description'])) {
-                    $validated['description'] = $this->getDefaultDescription($validated['is_asker']);
-                    
-                    Log::info('🔄 Description auto-updated', [
-                        'user_id' => $user->id,
-                        'new_is_asker' => $validated['is_asker'],
-                        'new_description' => $validated['description']
-                    ]);
-                }
-            }
-
-            // تحديث البيانات - استخدام array_filter ولكن مع ARRAY_FILTER_USE_BOTH للحفاظ على القيم المهمة
-            $dataToUpdate = array_filter($validated, function($value, $key) {
-                // السماح بتحديث description حتى لو كان فارغاً عند تغيير is_asker
-                if ($key === 'description') {
-                    return true;
-                }
-                // باقي الحقول: فقط القيم غير الفارغة
-                return !is_null($value) && $value !== '';
-            }, ARRAY_FILTER_USE_BOTH);
-            
-            $user->update($dataToUpdate);
-
-            Log::info('✅ Profile updated', ['user_id' => $user->id]);
-
-            return $this->successResponse(
-                'تم تحديث الملف الشخصي بنجاح',
-                ['user' => $this->formatUserData($user->fresh())]
-            );
-
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'بيانات غير صحيحة',
-                'errors' => $e->errors()
-            ], 422);
-            
-        } catch (\Exception $e) {
-            Log::error('❌ Error updating profile', ['error' => $e->getMessage()]);
-            return $this->errorResponse('حدث خطأ أثناء تحديث الملف الشخصي', 500);
-        }
-    }
-
     // ==================== Helper Methods ====================
+
 
     /**
      * تنسيق بيانات المستخدم للـ Response

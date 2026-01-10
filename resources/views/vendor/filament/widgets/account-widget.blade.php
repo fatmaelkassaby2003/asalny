@@ -1,35 +1,30 @@
-<x-filament::widget class="filament-account-widget">
-    <x-filament::card>
-        @php
-            $user = \Filament\Facades\Filament::auth()->user();
-        @endphp
+@php
+    $user = filament()->auth()->user();
+@endphp
 
-        <div class="flex h-12 items-center space-x-4 rtl:space-x-reverse">
-            <x-filament::user-avatar :user="$user" />
-
-            <div>
-                <h2 class="text-lg font-bold tracking-tight sm:text-xl">
-                    {{ __('filament::widgets/account-widget.welcome', ['user' => \Filament\Facades\Filament::getUserName($user)]) }}
-                </h2>
-
-                <form
-                    action="{{ route('filament.auth.logout') }}"
-                    method="post"
-                    class="text-sm"
-                >
+<div style="height: 120px; display: flex; align-items: center; justify-content: center;">
+    <x-filament-widgets::widget style="height: 100%; width: 100%;">
+        <x-filament::section style="height: 100%; display: flex; align-items: center; justify-content: center;">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 1.5rem;">
+                <form action="{{ filament()->getLogoutUrl() }}" method="post">
                     @csrf
-
-                    <button
+                    <x-filament::button
+                        color="gray"
+                        icon="heroicon-m-arrow-left-on-rectangle"
                         type="submit"
-                        @class([
-                            'text-gray-600 outline-none hover:text-primary-500 focus:underline',
-                            'dark:text-gray-300 dark:hover:text-primary-500' => config('filament.dark_mode'),
-                        ])
+                        size="sm"
                     >
-                        {{ __('filament::widgets/account-widget.buttons.logout.label') }}
-                    </button>
+                        تسجيل الخروج
+                    </x-filament::button>
                 </form>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="text-align: right;">
+                        <h2 style="font-size: 1.1rem; font-weight: 700; margin: 0;">مرحباً</h2>
+                        <p style="font-size: 0.75rem; color: #6b7280; margin: 0;">{{ filament()->getUserName($user) }}</p>
+                    </div>
+                    <x-filament-panels::avatar.user :user="$user" size="md" />
+                </div>
             </div>
-        </div>
-    </x-filament::card>
-</x-filament::widget>
+        </x-filament::section>
+    </x-filament-widgets::widget>
+</div>

@@ -5,16 +5,17 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\UserResource\Pages;
 use App\Models\User;
 use Filament\Forms;
-use Filament\Resources\Form;
+use Filament\Forms\Form;
 use Filament\Resources\Resource;
-use Filament\Resources\Table;
+use Filament\Tables\Table;
 use Filament\Tables;
 
 class UserResource extends Resource
 {
     protected static ?string $model = User::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-users';
+    protected static ?string $navigationIcon = null;
+    protected static ?string $navigationGroup = 'الإدارة';
 
     protected static ?string $navigationLabel = 'المستخدمين';
 
@@ -71,6 +72,7 @@ class UserResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('id')
                     ->label('ID')
+                    ->state(fn ($record) => (string) $record->id)
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('name')
@@ -80,41 +82,44 @@ class UserResource extends Resource
 
                 Tables\Columns\TextColumn::make('phone')
                     ->label('الهاتف')
+                    ->state(fn ($record) => (string) $record->phone)
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('email')
                     ->label('البريد')
                     ->searchable(),
 
-                Tables\Columns\BadgeColumn::make('gender')
+                Tables\Columns\TextColumn::make('gender')
                     ->label('الجنس')
-                    ->enum([
+                    ->badge()
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
                         'male' => 'ذكر',
                         'female' => 'أنثى',
-                    ])
-                    ->colors([
-                        'primary' => 'male',
-                        'danger' => 'female',
-                    ]),
+                        default => $state,
+                    })
+                    ->color(fn (string $state): string => match ($state) {
+                        'male' => 'info',
+                        'female' => 'danger',
+                        default => 'gray',
+                    }),
 
                 Tables\Columns\ToggleColumn::make('is_driver')
                     ->label('مجيب')
                     ->onColor('primary')
                     ->offColor('warning')
                     ->onIcon('heroicon-s-check')
-                    ->offIcon('heroicon-s-x'),
+                    ->offIcon('heroicon-s-x-mark'),
 
                 Tables\Columns\ToggleColumn::make('is_active')
                     ->label('نشط')
                     ->onColor('success')
                     ->offColor('danger')
                     ->onIcon('heroicon-s-check')
-                    ->offIcon('heroicon-s-x'),
+                    ->offIcon('heroicon-s-x-mark'),
 
-                Tables\Columns\TextColumn::make('created_at')
+                Tables\Columns\TextColumn::make('registered_at')
                     ->label('تاريخ التسجيل')
-                    ->dateTime('Y-m-d H:i')
-                    ->sortable(),
+                    ->state(fn ($record) => $record->created_at?->format('Y-m-d H:i')),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('gender')
@@ -139,18 +144,20 @@ class UserResource extends Resource
             ->actions([
                 Tables\Actions\ViewAction::make()
                     ->label('عرض')
-                    ->button()
+                    ->iconButton()
                     ->color('primary'),
                 Tables\Actions\EditAction::make()
                     ->label('تعديل')
-                    ->button()
-                    ->color('warning'),
+                    ->iconButton()
+                    ->color('primary'),
                 Tables\Actions\DeleteAction::make()
                     ->label('حذف')
-                    ->button()
+                    ->iconButton()
                     ->color('danger')
                     ->requiresConfirmation(),
             ])
+            ->actionsColumnLabel('الاجراءات')
+            ->actionsAlignment('left')
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make()
                     ->label('حذف المحدد'),

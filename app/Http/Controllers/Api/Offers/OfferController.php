@@ -356,6 +356,7 @@ public function store(Request $request): JsonResponse
                             'price' => $offer->price,
                             'response_time' => $offer->response_time,
                             'note' => $offer->note,
+                            'message' => $offer->note,
                             'status' => $offer->status,
                             'answerer' => [
                                 'id' => $offer->answerer->id,
@@ -364,6 +365,7 @@ public function store(Request $request): JsonResponse
                                 'email' => $offer->answerer->email,
                                 'gender' => $offer->answerer->gender,
                                 'description' => $offer->answerer->description,
+                                'rating' => 5.0,
                                 'is_active' => $offer->answerer->is_active,
                             ],
                             'location' => $offer->location ? [

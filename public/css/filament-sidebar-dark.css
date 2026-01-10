@@ -1,0 +1,179 @@
+/* Dark Sidebar Theme & Layout Override */
+:root {
+    --fi-sidebar-width: 260px !important;
+    /* Increased to 280px */
+}
+
+/* Sidebar Container */
+.fi-sidebar {
+    width: var(--fi-sidebar-width) !important;
+    background-color: #111827 !important;
+    /* Dark Navy */
+    border-right: 1px solid #1f2937 !important;
+}
+
+.fi-sidebar-nav {
+    background-color: #111827 !important;
+}
+
+/* Header/Brand Area */
+.fi-sidebar-header {
+    background-color: #111827 !important;
+    border-bottom: 1px solid #1f2937 !important;
+    display: flex;
+    justify-content: center !important;
+    padding-top: 1.5rem !important;
+    padding-bottom: 1.5rem !important;
+}
+
+/* ============================================ */
+/* FINAL FIX: Force Equal Widget Heights */
+/* ============================================ */
+
+/* Target ALL dashboard widgets at grid level */
+.fi-wi-account,
+.fi-wi-account-custom,
+.asalny-welcome-widget {
+    height: 200px !important;
+    max-height: 200px !important;
+    min-height: 200px !important;
+}
+
+/* Force section height */
+.fi-wi-account>.fi-section,
+.fi-wi-account-custom>.fi-section,
+.asalny-welcome-widget>.fi-section {
+    height: 100% !important;
+    min-height: 100% !important;
+    max-height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+}
+
+/* Force content container height */
+.fi-wi-account .fi-section-content-ctn,
+.fi-wi-account-custom .fi-section-content-ctn,
+.asalny-welcome-widget .fi-section-content-ctn {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    height: 100% !important;
+}
+
+/* Also target inner content */
+.fi-wi-account .fi-section-content,
+.fi-wi-account-custom .fi-section-content,
+.asalny-welcome-widget .fi-section-content {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+}
+
+/* NEW: Force all widgets in dashboard to same height */
+.fi-section-content-ctn>div,
+.fi-section-content>div {
+    height: 100% !important;
+}
+
+/* Force grid items to be same height */
+[x-data]>.grid>* {
+    height: 120px !important;
+}
+
+.fi-section {
+    height: 100% !important;
+}
+
+.fi-sidebar-header a {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-decoration: none;
+}
+
+.fi-sidebar-header .fi-logo {
+    display: contents;
+}
+
+/* Sidebar Group Labels */
+.fi-sidebar-group-label span {
+    color: #9ca3af !important;
+    font-weight: 600;
+    font-size: 0.85rem;
+    /* Adjusted for width */
+}
+
+/* Hide collapse arrows */
+.fi-sidebar-group-collapse-button {
+    display: none !important;
+}
+
+/* TREE VIEW - LINES AND DOTS (RTL) */
+.fi-sidebar-group-items>ul {
+    position: relative;
+    padding-right: 20px !important;
+    /* Adjusted spacing */
+    border-right: 2px solid #374151 !important;
+    margin-right: 10px;
+}
+
+/* Connector Dot */
+.fi-sidebar-item>.fi-sidebar-item-button::before {
+    content: '';
+    position: absolute;
+    right: -26px;
+    /* Position on line */
+    top: 50%;
+    width: 8px;
+    /* Slightly smaller dot */
+    height: 8px;
+    background-color: #4b5563;
+    border-radius: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    border: 2px solid #111827;
+}
+
+/* Active State Styles */
+.fi-sidebar-item.fi-active>.fi-sidebar-item-button {
+    background-color: #3b82f6 !important;
+    color: #ffffff !important;
+    border-radius: 6px;
+    padding-block: 8px;
+}
+
+/* Active Dot */
+.fi-sidebar-item.fi-active>.fi-sidebar-item-button::before {
+    background-color: #3b82f6 !important;
+    border-color: #1e3a8a;
+    width: 10px;
+    height: 10px;
+    right: -27px;
+}
+
+/* Item Text & Icons */
+.fi-sidebar-item-label {
+    color: #e5e7eb !important;
+    font-size: 0.9rem;
+}
+
+.fi-sidebar-item-icon {
+    color: #9ca3af !important;
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+/* Active Item Text & Icon */
+.fi-sidebar-item.fi-active .fi-sidebar-item-label,
+.fi-sidebar-item.fi-active .fi-sidebar-item-icon {
+    color: #ffffff !important;
+}
+
+/* Hover Effects */
+.fi-sidebar-item:not(.fi-active)>.fi-sidebar-item-button:hover {
+    background-color: #1f2937 !important;
+}

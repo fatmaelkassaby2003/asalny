@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\Offers\ExtensionController;
 use App\Http\Controllers\Api\Wallet\WalletController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\ProfileController;
 
 // Routes عامة
 Route::post('/register', [AuthController::class, 'register']);
@@ -80,8 +81,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // المصادقة
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/logout-all', [AuthController::class, 'logoutAll']);
-    Route::get('/me', [AuthController::class, 'me']);
-    Route::put('/update-profile', [AuthController::class, 'updateProfile']);
+    Route::get('/me', [ProfileController::class, 'getMyProfile']); // ✅ بروفايلي مع الإحصائيات
+    Route::put('/me', [ProfileController::class, 'updateProfile']); // ✅ تحديث بروفايلي
     
     // المحفظة
     Route::prefix('wallet')->group(function () {
@@ -159,4 +160,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/{chatId}/messages', [ChatController::class, 'getMessages']); // رسائل محادثة معينة
         Route::post('/messages', [ChatController::class, 'sendMessage']); // إرسال رسالة
     });
+
+    // بروفايل المجيبين والتقييمات
+    Route::get('/answerers/{userId}/profile', [ProfileController::class, 'getAnswererProfile']); // بروفايل مجيب
+    Route::post('/ratings', [ProfileController::class, 'rateAnswerer']); // تقييم مجيب
 });

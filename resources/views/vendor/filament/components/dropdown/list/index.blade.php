@@ -1,6 +1,3 @@
-<x-filament-support::dropdown.list
-    :attributes="\Filament\Support\prepare_inherited_attributes($attributes)"
-    :dark-mode="config('filament.dark_mode')"
->
+<div {{ $attributes->class(['fi-dropdown-list p-1']) }}>
     {{ $slot }}
-</x-filament-support::dropdown.list>
+</div>

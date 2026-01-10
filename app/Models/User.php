@@ -97,4 +97,53 @@ class User extends Authenticatable implements FilamentUser
     {
         return $this->hasMany(UserQuestion::class)->where('is_active', true);
     }
+
+    /**
+     * التقييمات التي أعطاها السائل
+     */
+    public function givenRatings()
+    {
+        return $this->hasMany(Rating::class, 'asker_id');
+    }
+
+    /**
+     * التقييمات التي حصل عليها المجيب
+     */
+    public function receivedRatings()
+    {
+        return $this->hasMany(Rating::class, 'answerer_id');
+    }
+
+    /**
+     * متوسط التقييم (للمجيب)
+     */
+    public function getAverageRatingAttribute()
+    {
+        $avg = $this->receivedRatings()->avg('stars');
+        return $avg ? round($avg, 1) : 0;
+    }
+
+    /**
+     * عدد التقييمات (للمجيب)
+     */
+    public function getRatingsCountAttribute()
+    {
+        return $this->receivedRatings()->count();
+    }
+
+    /**
+     * الطلبات كسائل
+     */
+    public function ordersAsAsker()
+    {
+        return $this->hasMany(Order::class, 'asker_id');
+    }
+
+    /**
+     * الطلبات كمجيب
+     */
+    public function ordersAsAnswerer()
+    {
+        return $this->hasMany(Order::class, 'answerer_id');
+    }
 }

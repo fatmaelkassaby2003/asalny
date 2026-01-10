@@ -1,0 +1,276 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@200;300;400;500;600;700;800;900&display=swap');
+
+:root {
+    --font-family-base: 'Cairo', sans-serif;
+    --font-family-sans: 'Cairo', sans-serif;
+
+    /* Reference Colors */
+    --sidebar-bg: #1e2532;
+    --sidebar-active: #2563eb;
+    --text-inactive: #94a3b8;
+    --text-active: #ffffff;
+}
+
+body,
+.filament-body {
+    font-family: 'Cairo', sans-serif !important;
+}
+
+/* Sidebar Container */
+.filament-sidebar {
+    background-color: var(--sidebar-bg) !important;
+    border-right: none !important;
+    /* Removed separator */
+}
+
+.filament-sidebar-nav {
+    background-color: var(--sidebar-bg) !important;
+    gap: 1.5rem !important;
+    /* INCREASED GAP significantly */
+}
+
+/* Sidebar Item - Default */
+.filament-sidebar-item>a {
+    color: #cbd5e1 !important;
+    /* Lighter color for better visibility */
+    border-radius: 0.5rem !important;
+    margin-bottom: 0.125rem !important;
+    /* Tighter spacing */
+    padding: 0.625rem 1rem !important;
+    /* Smaller padding */
+    font-size: 0.95rem !important;
+    font-weight: 500 !important;
+    transition: all 0.2s ease-in-out;
+    border-bottom: none !important;
+    /* Remove separators */
+}
+
+.filament-sidebar-item>a:hover {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    color: #fff !important;
+}
+
+/* Sidebar Item - Active */
+.filament-sidebar-item-active>a {
+    background-color: var(--sidebar-active) !important;
+    color: var(--text-active) !important;
+    font-weight: 800 !important;
+    /* Bold for active */
+    box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.4);
+}
+
+.filament-sidebar-item-active>a:hover {
+    background-color: #1d4ed8 !important;
+}
+
+/* Icons */
+.filament-sidebar-item>a .filament-sidebar-item-icon {
+    font-size: 1.25rem !important;
+    /* Bigger icons */
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+    margin-left: 0.75rem !important;
+    /* More space in RTL */
+    color: #cbd5e1 !important;
+    /* Clear color */
+    opacity: 1 !important;
+    /* Fully visible */
+}
+
+/* Active item icons */
+.filament-sidebar-item-active>a .filament-sidebar-item-icon {
+    color: #ffffff !important;
+    /* White when active */
+}
+
+/* Group Labels - Professional & Fixed Alignment */
+.filament-sidebar-group-label,
+.filament-sidebar-group>button {
+    color: #cbd5e1 !important;
+    font-size: 1rem !important;
+    font-weight: 700 !important;
+    padding: 0.75rem 1rem !important;
+    /* Adjusted padding */
+    border: none !important;
+    background: transparent !important;
+    margin-bottom: 0.25rem !important;
+
+    /* Flex Setup for correct RTL/LTR Icon placement */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    /* Start = Right in RTL */
+    flex-direction: row !important;
+    gap: 0.75rem !important;
+    /* Space between icon and text */
+}
+
+/* Base style for the icon container (Pseudo-element) */
+.filament-sidebar-group-label::before,
+.filament-sidebar-group>button::before {
+    content: "" !important;
+    display: block !important;
+    flex-shrink: 0 !important;
+    /* Prevent squashing */
+    width: 1.5rem !important;
+    /* Fixed width */
+    height: 1.5rem !important;
+    /* Fixed height */
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    background-size: 1.25rem !important;
+    /* Icon size inside container */
+    opacity: 0.9 !important;
+    /* Ensure no margins interfere with gap */
+    margin: 0 !important;
+}
+
+/* 
+   Targeting Groups by Order 
+   1. Support (الدعم) -> Chat Bubble
+   2. Operations (العمليات) -> Briefcase
+   3. Management (الإدارة) -> User Group
+   4. Finance (المالية) -> Banknotes
+*/
+
+/* 1. Support (الدعم) */
+.filament-sidebar-group:nth-of-type(1) .filament-sidebar-group-label::before,
+.filament-sidebar-group:nth-of-type(1)>button::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%233b82f6' class='w-6 h-6'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12.375m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z' /%3E%3C/svg%3E") !important;
+}
+
+/* 2. Operations (العمليات) */
+.filament-sidebar-group:nth-of-type(2) .filament-sidebar-group-label::before,
+.filament-sidebar-group:nth-of-type(2)>button::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%233b82f6' class='w-6 h-6'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0112 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 01-.673-.38m0 0A2.18 2.18 0 013 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 013.413-.387m7.5 0V5.25A2.25 2.25 0 0013.5 3h-3a2.25 2.25 0 00-2.25 2.25v.894m7.5 0a48.667 48.667 0 00-7.5 0M12 12.75h.008v.008H12v-.008z' /%3E%3C/svg%3E") !important;
+}
+
+/* 3. Management (الإدارة) */
+.filament-sidebar-group:nth-of-type(3) .filament-sidebar-group-label::before,
+.filament-sidebar-group:nth-of-type(3)>button::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%233b82f6' class='w-6 h-6'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z' /%3E%3C/svg%3E") !important;
+}
+
+/* 4. Finance (المالية) */
+.filament-sidebar-group:nth-of-type(4) .filament-sidebar-group-label::before,
+.filament-sidebar-group:nth-of-type(4)>button::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%233b82f6' class='w-6 h-6'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z' /%3E%3C/svg%3E") !important;
+}
+
+/* Make icons more visible */
+.filament-sidebar-item-icon,
+.filament-sidebar-group-label svg {
+    color: inherit !important;
+    opacity: 0.9 !important;
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+}
+
+/* Remove ALL separator lines */
+.filament-sidebar-group,
+.filament-sidebar-item,
+.filament-sidebar nav>*,
+.filament-sidebar nav ul>li,
+.filament-sidebar-group-items,
+.filament-sidebar ul,
+.filament-sidebar li,
+.filament-sidebar nav,
+.filament-sidebar>*,
+aside nav,
+aside nav>*,
+aside ul,
+aside li {
+    border-top: none !important;
+    border-bottom: none !important;
+    border-left: none !important;
+    border-right: none !important;
+    border: none !important;
+}
+
+/* Target collapsible group borders specifically */
+.filament-sidebar-group:not(:last-child),
+.filament-sidebar-group-button,
+.filament-sidebar-group-label {
+    border-bottom: none !important;
+    border: none !important;
+}
+
+/* Remove any dividers */
+.filament-sidebar hr {
+    display: none !important;
+}
+
+.filament-sidebar .border-t,
+.filament-sidebar .border-b {
+    border-top: none !important;
+    border-bottom: none !important;
+}
+
+/* Header/Brand Area - AGGRESSIVE CENTERING */
+.filament-sidebar {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+.filament-brand {
+    background-color: var(--sidebar-bg) !important;
+    border-bottom: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 3rem 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.filament-brand>div,
+.filament-brand span {
+    display: inline-block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Target ALL possible wrapper elements */
+.filament-sidebar-header,
+.filament-sidebar>div:first-child,
+aside>div:first-child {
+    background-color: var(--sidebar-bg) !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    text-align: center !important;
+    width: 100% !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.filament-sidebar-header a,
+.filament-sidebar-header>* {
+    width: 100% !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    text-align: center !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* General Overrides */
+.text-primary-600,
+.text-primary-500,
+.text-primary-700 {
+    color: #3b82f6 !important;
+}
+
+.bg-primary-600,
+.bg-primary-500,
+.bg-primary-700 {
+    background-color: #3b82f6 !important;
+}
