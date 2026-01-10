@@ -365,7 +365,11 @@ public function store(Request $request): JsonResponse
                                 'email' => $offer->answerer->email,
                                 'gender' => $offer->answerer->gender,
                                 'description' => $offer->answerer->description,
-                                'rating' => 5.0,
+                                'profile_image' => $offer->answerer->profile_image ? url($offer->answerer->profile_image) : null,
+                                'rating' => [
+                                    'average' => $offer->answerer->average_rating,
+                                    'count' => $offer->answerer->ratings_count,
+                                ],
                                 'is_active' => $offer->answerer->is_active,
                             ],
                             'location' => $offer->location ? [
