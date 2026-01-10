@@ -29,6 +29,7 @@ class ProfileController extends Controller
                 'gender' => $user->gender,
                 'is_asker' => $user->is_asker,
                 'description' => $user->description,
+                'profile_image' => $user->profile_image ? url($user->profile_image) : null,
                 'wallet_balance' => $user->wallet_balance,
                 'created_at' => $user->created_at->format('Y-m-d'),
             ];
@@ -85,9 +86,13 @@ class ProfileController extends Controller
                 'name' => 'sometimes|string|max:255',
                 'description' => 'sometimes|nullable|string|max:500',
                 'gender' => 'sometimes|in:male,female',
+                'profile_image' => 'sometimes|image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB max
             ], [
                 'name.max' => 'الاسم لا يمكن أن يتجاوز 255 حرف',
                 'description.max' => 'الوصف لا يمكن أن يتجاوز 500 حرف',
+                'profile_image.image' => 'يجب أن يكون الملف صورة',
+                'profile_image.mimes' => 'الصورة يجب أن تكون jpeg, png, jpg, أو gif',
+                'profile_image.max' => 'حجم الصورة لا يمكن أن يتجاوز 5 ميجا',
             ]);
 
             if ($validator->fails()) {
@@ -98,7 +103,33 @@ class ProfileController extends Controller
                 ], 422);
             }
 
-            $user->update($request->only(['name', 'description', 'gender']));
+            $dataToUpdate = $request->only(['name', 'description', 'gender']);
+
+            // ✅ رفع صورة البروفايل للـ public
+            if ($request->hasFile('profile_image')) {
+                $image = $request->file('profile_image');
+                $imageName = 'profile_' . $user->id . '_' . time() . '.' . $image->getClientOriginalExtension();
+                
+                // حفظ في public/uploads/profiles
+                $image->move(public_path('uploads/profiles'), $imageName);
+                
+                // حذف الصورة القديمة إن وجدت
+                if ($user->profile_image) {
+                    $oldImagePath = public_path($user->profile_image);
+                    if (file_exists($oldImagePath)) {
+                        unlink($oldImagePath);
+                    }
+                }
+                
+                $dataToUpdate['profile_image'] = 'uploads/profiles/' . $imageName;
+            }
+
+            $user->update($dataToUpdate);
+
+            // ✅ إرجاع الرابط الكامل
+            $profileImageUrl = $user->profile_image 
+                ? url($user->profile_image) 
+                : null;
 
             return response()->json([
                 'success' => true,
@@ -108,6 +139,7 @@ class ProfileController extends Controller
                     'name' => $user->name,
                     'description' => $user->description,
                     'gender' => $user->gender,
+                    'profile_image' => $profileImageUrl,
                 ],
             ], 200);
 

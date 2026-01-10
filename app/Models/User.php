@@ -24,6 +24,7 @@ class User extends Authenticatable implements FilamentUser
         'is_active',
         'description',
         'wallet_balance',
+        'profile_image',
     ];
 
     protected $hidden = [
