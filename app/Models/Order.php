@@ -28,6 +28,8 @@ class Order extends Model
         'approved_at',
         'disputed_at',
         'escalated_at',
+        'payment_status',
+        'paid_at',
     ];
 
     protected function casts(): array
@@ -41,6 +43,7 @@ class Order extends Model
             'approved_at' => 'datetime',
             'disputed_at' => 'datetime',
             'escalated_at' => 'datetime',
+            'paid_at' => 'datetime',
         ];
     }
 

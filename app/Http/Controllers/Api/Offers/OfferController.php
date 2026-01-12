@@ -337,7 +337,7 @@ public function store(Request $request): JsonResponse
                 ], 403);
             }
 
-            $offers = QuestionOffer::with(['answerer', 'location'])
+            $offers = QuestionOffer::with(['answerer', 'location', 'order'])
                 ->where('question_id', $questionId)
                 ->orderBy('created_at', 'desc')
                 ->get();
@@ -353,6 +353,7 @@ public function store(Request $request): JsonResponse
                     'offers' => $offers->map(function ($offer) {
                         return [
                             'id' => $offer->id,
+                            'order_id' => $offer->order ? $offer->order->id : null,
                             'price' => $offer->price,
                             'response_time' => $offer->response_time,
                             'note' => $offer->note,
@@ -413,7 +414,7 @@ public function store(Request $request): JsonResponse
                 ], 403);
             }
 
-            $offers = QuestionOffer::with(['question', 'asker'])
+            $offers = QuestionOffer::with(['question', 'asker', 'order'])
                 ->where('answerer_id', $answerer->id)
                 ->orderBy('created_at', 'desc')
                 ->get();
@@ -424,6 +425,7 @@ public function store(Request $request): JsonResponse
                     'offers' => $offers->map(function ($offer) {
                         return [
                             'id' => $offer->id,
+                            'order_id' => $offer->order ? $offer->order->id : null,
                             'price' => $offer->price,
                             'response_time' => $offer->response_time,
                             'note' => $offer->note,

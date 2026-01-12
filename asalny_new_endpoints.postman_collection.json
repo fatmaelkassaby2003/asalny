@@ -1,0 +1,269 @@
+{
+    "info": {
+        "name": "Asalny API - New & Updated Endpoints",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:8000/api"
+        },
+        {
+            "key": "token",
+            "value": "YOUR_AUTH_TOKEN_HERE"
+        }
+    ],
+    "item": [
+        {
+            "name": "👤 Profile",
+            "item": [
+                {
+                    "name": "Get My Profile",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{base_url}}/me"
+                    }
+                },
+                {
+                    "name": "Update My Profile",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"اسم جديد\",\n    \"description\": \"وصف جديد\",\n    \"gender\": \"male\"\n}"
+                        },
+                        "url": "{{base_url}}/me"
+                    }
+                },
+                {
+                    "name": "Upload Profile Image",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "profile_image",
+                                    "type": "file",
+                                    "src": ""
+                                }
+                            ]
+                        },
+                        "url": "{{base_url}}/me"
+                    }
+                },
+                {
+                    "name": "Get Answerer Profile",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{base_url}}/answerers/1/profile"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "⭐ Ratings",
+            "item": [
+                {
+                    "name": "Rate Answerer",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"answerer_id\": 1,\n    \"stars\": 5,\n    \"comment\": \"ممتاز جداً!\"\n}"
+                        },
+                        "url": "{{base_url}}/ratings"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "📦 Orders",
+            "item": [
+                {
+                    "name": "Answer Order",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "order_id",
+                                    "value": "5",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "answer_text",
+                                    "value": "الإجابة هنا...",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "answer_image",
+                                    "type": "file",
+                                    "src": ""
+                                }
+                            ]
+                        },
+                        "url": "{{base_url}}/orders/answer"
+                    }
+                },
+                {
+                    "name": "Approve Answer",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"order_id\": 5\n}"
+                        },
+                        "url": "{{base_url}}/orders/approve"
+                    }
+                },
+                {
+                    "name": "Cancel Order",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"order_id\": 5\n}"
+                        },
+                        "url": "{{base_url}}/orders/cancel"
+                    }
+                },
+                {
+                    "name": "Follow Answer",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{base_url}}/orders/5/follow"
+                    }
+                },
+                {
+                    "name": "Answerer Orders",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{base_url}}/orders/answerer"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "💬 Disputes",
+            "item": [
+                {
+                    "name": "Dispute via Chat",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"chat_id\": 1,\n    \"reason\": \"الإجابة غير كافية\"\n}"
+                        },
+                        "url": "{{base_url}}/chats/dispute"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🎁 Offers",
+            "item": [
+                {
+                    "name": "Get Question Offers (with Rating)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{base_url}}/offers/questions/11"
+                    }
+                }
+            ]
+        }
+    ]
+}

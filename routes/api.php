@@ -133,6 +133,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Orders Routes (معالجة العروض)
     Route::prefix('orders')->group(function () {
+        Route::get('/asker', [OrderController::class, 'askerOrders']); // عرض طلبات السائل
         Route::get('/answerer', [OrderController::class, 'answererOrders']); // عرض طلبات المجيب
         Route::post('/answer', [OrderController::class, 'answerOrder']); // الإجابة على طلب
         Route::post('/cancel', [OrderController::class, 'cancelOrder']); // إلغاء طلب

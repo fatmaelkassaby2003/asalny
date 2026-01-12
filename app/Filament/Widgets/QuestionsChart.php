@@ -2,20 +2,20 @@
 
 namespace App\Filament\Widgets;
 
-use App\Models\Order;
+use App\Models\UserQuestion;
 use Filament\Widgets\ChartWidget;
 
-class OrdersChart extends ChartWidget
+class QuestionsChart extends ChartWidget
 {
-    protected static ?string $heading = 'حركة الطلبات خلال الشهر';
+    protected static ?string $heading = 'حركة الأسئلة خلال الشهر';
     
-    protected static ?int $sort = 2;
+    protected static ?int $sort = 3;
     
     protected int | string | array $columnSpan = 1;
 
     protected function getData(): array
     {
-        $data = Order::selectRaw('DATE(created_at) as date, count(*) as count')
+        $data = UserQuestion::selectRaw('DATE(created_at) as date, count(*) as count')
             ->where('created_at', '>=', now()->subDays(30))
             ->groupBy('date')
             ->pluck('count', 'date')
@@ -33,11 +33,11 @@ class OrdersChart extends ChartWidget
         return [
             'datasets' => [
                 [
-                    'label' => 'الطلبات',
+                    'label' => 'الأسئلة',
                     'data' => $chartData,
                     'fill' => true,
-                    'backgroundColor' => 'rgba(59, 130, 246, 0.2)',
-                    'borderColor' => '#3b82f6',
+                    'backgroundColor' => 'rgba(16, 185, 129, 0.2)',
+                    'borderColor' => '#10b981',
                     'tension' => 0.3,
                 ],
             ],

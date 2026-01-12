@@ -2,9 +2,11 @@
 
 namespace App\Filament\Widgets;
 
-use Filament\Widgets\AccountWidget as BaseAccountWidget;
+use Filament\Widgets\Widget;
 
-class CustomAccountWidget extends BaseAccountWidget
+class CustomAccountWidget extends Widget
 {
+    protected static string $view = 'vendor.filament.widgets.account-widget';
+    
     protected int | string | array $columnSpan = 1;
 }

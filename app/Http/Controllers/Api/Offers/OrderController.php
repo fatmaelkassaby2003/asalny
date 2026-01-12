@@ -14,6 +14,76 @@ use Illuminate\Support\Facades\Validator;
 class OrderController extends Controller
 {
     /**
+     * عرض طلبات السائل (جميع طلباته مع الحالة)
+     */
+    public function askerOrders(Request $request): JsonResponse
+    {
+        try {
+            $asker = $request->user();
+
+            // تحديث الطلبات المنتهية
+            Order::updateExpiredOrders();
+
+            $orders = Order::with(['question', 'answerer'])
+                ->where('asker_id', $asker->id)
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'orders' => $orders->map(function ($order) {
+                        return [
+                            'id' => $order->id,
+                            'status' => $order->status,
+                            'has_answer' => !empty($order->answer_text),
+                            'price' => $order->price,
+                            'response_time' => $order->response_time,
+                            'remaining_minutes' => $order->remaining_time,
+                            'expires_at' => $order->expires_at ? $order->expires_at->format('Y-m-d H:i:s') : null,
+                            'answered_at' => $order->answered_at ? $order->answered_at->format('Y-m-d H:i:s') : null,
+                            'approved_at' => $order->approved_at ? $order->approved_at->format('Y-m-d H:i:s') : null,
+                            'dispute_count' => $order->dispute_count,
+                            'question' => [
+                                'id' => $order->question->id,
+                                'question' => $order->question->question,
+                            ],
+                            'answerer' => $order->answerer ? [
+                                'id' => $order->answerer->id,
+                                'name' => $order->answerer->name,
+                                'profile_image' => $order->answerer->profile_image ? url($order->answerer->profile_image) : null,
+                                'rating' => [
+                                    'average' => $order->answerer->average_rating,
+                                    'count' => $order->answerer->ratings_count,
+                                ],
+                            ] : null,
+                            'created_at' => $order->created_at->format('Y-m-d H:i:s'),
+                        ];
+                    }),
+                    'total' => $orders->count(),
+                    'stats' => [
+                        'pending' => $orders->where('status', 'pending')->count(),
+                        'answered' => $orders->where('status', 'answered')->count(),
+                        'completed' => $orders->where('status', 'completed')->count(),
+                        'disputed' => $orders->where('status', 'disputed')->count(),
+                        'expired' => $orders->where('status', 'expired')->count(),
+                    ],
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('❌ خطأ في عرض طلبات السائل', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'حدث خطأ أثناء عرض الطلبات',
+            ], 500);
+        }
+    }
+
+    /**
      * عرض طلبات المجيب (الطلبات الواردة له)
      */
     public function answererOrders(Request $request): JsonResponse
@@ -303,7 +373,7 @@ class OrderController extends Controller
                 ], 403);
             }
 
-            if ($order->status !== 'pending') {
+            if (!in_array($order->status, ['pending', 'expired'])) {
                 return response()->json([
                     'success' => false,
                     'message' => 'لا يمكن إلغاء طلب ' . $order->status,
@@ -573,18 +643,11 @@ class OrderController extends Controller
                 ], 400);
             }
 
-            // ✅ تحويل الفلوس من السائل إلى المجيب
+            // ✅ تحويل الفلوس للمجيب (الفلوس خُصمت من السائل عند قبول العرض)
             $walletService = app(\App\Services\WalletService::class);
             
             try {
-                // خصم من السائل
-                $walletService->withdraw(
-                    $asker,
-                    $order->price,
-                    "دفع للإجابة على الطلب #{$order->id}"
-                );
-
-                // إضافة للمجيب
+                // إضافة للمجيب (الفلوس خُصمت بالفعل من السائل عند قبول العرض)
                 $walletService->deposit(
                     $order->answerer,
                     $order->price,

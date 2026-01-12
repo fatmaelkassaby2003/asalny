@@ -113,6 +113,7 @@ class OrderResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make()->iconButton()->color('primary'),
+                Tables\Actions\DeleteAction::make()->iconButton()->color('danger'),
             ])
             ->actionsColumnLabel('الاجراءات')
             ->actionsAlignment('left')

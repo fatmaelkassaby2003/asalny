@@ -172,6 +172,12 @@ class ProfileController extends Controller
                 ], 404);
             }
 
+            // إحصائيات الطلبات
+            $orders = $answerer->ordersAsAnswerer();
+            $completedOrders = $orders->clone()->where('status', 'completed')->count();
+            $totalAnswered = $orders->clone()->whereIn('status', ['answered', 'completed', 'disputed'])->count();
+            $totalDisputes = $orders->clone()->where('dispute_count', '>', 0)->count();
+
             // آخر التقييمات
             $recentRatings = $answerer->receivedRatings()
                 ->with('asker:id,name')
@@ -194,15 +200,18 @@ class ProfileController extends Controller
                     'id' => $answerer->id,
                     'name' => $answerer->name,
                     'description' => $answerer->description,
+                    'profile_image' => $answerer->profile_image ? url($answerer->profile_image) : null,
+                    'member_since' => $answerer->created_at->format('Y-m-d'),
                     'rating' => [
                         'average' => $answerer->average_rating,
                         'count' => $answerer->ratings_count,
                     ],
                     'stats' => [
-                        'completed_orders' => $answerer->ordersAsAnswerer()->where('status', 'completed')->count(),
+                        'total_answered' => $totalAnswered,       // عدد الأسئلة اللي رد عليها
+                        'completed_orders' => $completedOrders,   // الإجابات الناجحة (المعتمدة)
+                        'total_disputes' => $totalDisputes,       // عدد الاعتراضات اللي خدها
                     ],
                     'recent_ratings' => $recentRatings,
-                    'member_since' => $answerer->created_at->format('Y-m-d'),
                 ],
             ], 200);
 

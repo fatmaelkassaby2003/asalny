@@ -107,9 +107,10 @@
     /* Adjusted for width */
 }
 
-/* Hide collapse arrows */
+/* Show collapse arrows */
 .fi-sidebar-group-collapse-button {
-    display: none !important;
+    display: flex !important;
+    color: #9ca3af !important;
 }
 
 /* TREE VIEW - LINES AND DOTS (RTL) */
@@ -176,4 +177,52 @@
 /* Hover Effects */
 .fi-sidebar-item:not(.fi-active)>.fi-sidebar-item-button:hover {
     background-color: #1f2937 !important;
+}
+
+/* ============================================ */
+/* Account Widget Content Centering */
+/* ============================================ */
+.fi-wi-account-content {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 1.5rem !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 100px !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+}
+
+/* Make parent relative */
+.fi-wi-account .fi-section-content,
+.fi-section-content {
+    position: relative !important;
+    min-height: 100px !important;
+}
+
+.fi-wi-account-user {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.75rem !important;
+}
+
+.fi-wi-account-user-info {
+    text-align: right !important;
+}
+
+.fi-wi-account-user-info h2 {
+    font-size: 1.1rem !important;
+    font-weight: 700 !important;
+    margin: 0 !important;
+    line-height: 1.3 !important;
+}
+
+.fi-wi-account-user-info p {
+    font-size: 0.75rem !important;
+    color: #6b7280 !important;
+    margin: 0 !important;
 }

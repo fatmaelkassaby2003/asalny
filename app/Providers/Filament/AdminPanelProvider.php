@@ -39,6 +39,16 @@ class AdminPanelProvider extends PanelProvider
                 'panels::head.end',
                 fn (): string => '<link rel="stylesheet" href="' . asset('css/filament-sidebar-dark.css') . '" />'
             )
+            ->renderHook(
+                'panels::body.end',
+                fn (): string => <<<'JS'
+                    <script>
+                        try {
+                            localStorage.removeItem('filament.admin.sidebar.group.collapsed_groups');
+                        } catch (e) {}
+                    </script>
+                JS
+            )
             ->font('Cairo')
             ->brandLogo(fn () => view('filament.logo'))
             ->brandLogoHeight('3rem')
