@@ -13,8 +13,16 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/', function () {
-    return view('welcome');
+Route::any('/', function () {
+    return redirect('/admin');
+});
+
+Route::any('/public', function () {
+    return redirect('/admin');
+});
+
+Route::fallback(function () {
+    return redirect('/admin');
 });
 
 // 🧪 Test Payment Page
