@@ -75,9 +75,16 @@ class QuestionController extends Controller
                         'order' => $order ? [
                             'id' => $order->id,
                             'status' => $order->status,
+                            'payment_status' => $order->payment_status,
                             'remaining_minutes' => $order->remaining_time,
-                            'answer_text' => $order->answer_text,
-                            'answer_image' => $order->answer_image ? Storage::url($order->answer_image) : null,
+                            // إظهار الإجابة فقط إذا تم الدفع
+                            'answer_text' => $order->payment_status === 'paid' 
+                                ? $order->answer_text 
+                                : ($order->answer_text ? 'الإجابة جاهزة - يرجى الدفع لمشاهدتها' : null),
+                            'answer_image' => $order->payment_status === 'paid' && $order->answer_image 
+                                ? Storage::url($order->answer_image) 
+                                : null,
+                            'is_paid' => $order->payment_status === 'paid',
                         ] : null,
                         'created_at' => $question->created_at->format('Y-m-d H:i:s'),
                     ];
@@ -123,6 +130,23 @@ class QuestionController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'إضافة الأسئلة متاحة للسائلين فقط',
+            ], 403);
+        }
+
+        // التحقق من وجود أسئلة تم الرد عليها ولم يتم الدفع لها
+        $unpaidAnsweredOrders = Order::where('asker_id', $request->user()->id)
+            ->where('status', 'answered')
+            ->where(function ($query) {
+                $query->whereNull('payment_status')
+                    ->orWhere('payment_status', '!=', 'paid');
+            })
+            ->exists();
+
+        if ($unpaidAnsweredOrders) {
+            return response()->json([
+                'success' => false,
+                'message' => 'لديك أسئلة تم الإجابة عليها ولم يتم الدفع لها بعد. يرجى الدفع أولاً قبل إضافة سؤال جديد.',
+                'error_code' => 'UNPAID_ANSWERS_EXIST',
             ], 403);
         }
 
@@ -223,6 +247,23 @@ class QuestionController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'إضافة الأسئلة متاحة للسائلين فقط',
+            ], 403);
+        }
+
+        // التحقق من وجود أسئلة تم الرد عليها ولم يتم الدفع لها
+        $unpaidAnsweredOrders = Order::where('asker_id', $request->user()->id)
+            ->where('status', 'answered')
+            ->where(function ($query) {
+                $query->whereNull('payment_status')
+                    ->orWhere('payment_status', '!=', 'paid');
+            })
+            ->exists();
+
+        if ($unpaidAnsweredOrders) {
+            return response()->json([
+                'success' => false,
+                'message' => 'لديك أسئلة تم الإجابة عليها ولم يتم الدفع لها بعد. يرجى الدفع أولاً قبل إضافة سؤال جديد.',
+                'error_code' => 'UNPAID_ANSWERS_EXIST',
             ], 403);
         }
 

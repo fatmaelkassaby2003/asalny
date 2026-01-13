@@ -226,3 +226,52 @@
     color: #6b7280 !important;
     margin: 0 !important;
 }
+
+/* ============================================ */
+/* LOGIN PAGE SPACING FIXES - FILAMENT 3       */
+/* ============================================ */
+
+/* Reduce form gaps */
+.fi-simple-main form {
+    gap: 0.5rem !important;
+}
+
+.fi-simple-main #form {
+    gap: 0.5rem !important;
+}
+
+/* Reduce grid gaps */
+.fi-simple-main .grid {
+    gap: 0.5rem !important;
+}
+
+/* Tighter input fields */
+.fi-simple-main .fi-input-wrp {
+    padding-block: 10px !important;
+}
+
+/* Reduce label spacing */
+.fi-simple-main .fi-fo-field-wrp-label {
+    margin-bottom: 0.25rem !important;
+}
+
+/* AGGRESSIVE: Pull form actions UP with negative margin */
+.fi-simple-main .fi-form-actions {
+    margin-top: -5.2rem !important;
+}
+
+/* Checkbox - Remove all bottom margin */
+.fi-simple-main .fi-fo-field-wrp:has(input[type="checkbox"]) {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+/* Reduce section padding */
+.fi-simple-main .fi-section-content {
+    padding: 1.5rem !important;
+}
+
+/* Header spacing */
+.fi-simple-header {
+    margin-bottom: 1rem !important;
+}

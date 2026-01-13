@@ -33,9 +33,12 @@ class OrderController extends Controller
                 'success' => true,
                 'data' => [
                     'orders' => $orders->map(function ($order) {
+                        $isPaid = $order->payment_status === 'paid';
                         return [
                             'id' => $order->id,
                             'status' => $order->status,
+                            'payment_status' => $order->payment_status,
+                            'is_paid' => $isPaid,
                             'has_answer' => !empty($order->answer_text),
                             'price' => $order->price,
                             'response_time' => $order->response_time,
@@ -48,6 +51,8 @@ class OrderController extends Controller
                                 'id' => $order->question->id,
                                 'question' => $order->question->question,
                             ],
+                            'answer_text' => $isPaid ? $order->answer_text : null,
+                            'answer_image' => $isPaid && $order->answer_image ? url(Storage::url($order->answer_image)) : null,
                             'answerer' => $order->answerer ? [
                                 'id' => $order->answerer->id,
                                 'name' => $order->answerer->name,
@@ -477,12 +482,19 @@ class OrderController extends Controller
                         'order' => $order ? [
                             'id' => $order->id,
                             'status' => $order->status,
+                            'payment_status' => $order->payment_status,
+                            'is_paid' => $order->payment_status === 'paid',
                             'price' => $order->price,
                             'response_time' => $order->response_time,
                             'remaining_minutes' => $order->remaining_time,
                             'expires_at' => $order->expires_at->format('Y-m-d H:i:s'),
-                            'answer_text' => $order->answer_text,
-                            'answer_image' => $order->answer_image ? Storage::url($order->answer_image) : null,
+                            // إظهار الإجابة فقط بعد الدفع
+                            'answer_text' => $order->payment_status === 'paid' 
+                                ? $order->answer_text 
+                                : ($order->answer_text ? 'الإجابة جاهزة - يرجى الدفع لمشاهدتها' : null),
+                            'answer_image' => $order->payment_status === 'paid' && $order->answer_image 
+                                ? Storage::url($order->answer_image) 
+                                : null,
                             'answered_at' => $order->answered_at ? $order->answered_at->format('Y-m-d H:i:s') : null,
                             'answerer' => [
                                 'id' => $order->answerer->id,
@@ -574,13 +586,20 @@ class OrderController extends Controller
                     'order' => [
                         'id' => $order->id,
                         'status' => $order->status,
+                        'payment_status' => $order->payment_status,
+                        'is_paid' => $order->payment_status === 'paid',
                         'price' => $order->price,
                         'response_time' => $order->response_time,
                         'expires_at' => \Carbon\Carbon::parse($order->expires_at)->format('Y-m-d H:i:s'),
                         'remaining_minutes' => $order->remaining_time,
                         'held_amount' => $order->held_amount,
-                        'answer_text' => $order->answer_text,
-                        'answer_image' => $order->answer_image ? Storage::url($order->answer_image) : null,
+                        // إظهار الإجابة فقط بعد الدفع
+                        'answer_text' => $order->payment_status === 'paid' 
+                            ? $order->answer_text 
+                            : ($order->answer_text ? 'الإجابة جاهزة - يرجى الدفع لمشاهدتها' : null),
+                        'answer_image' => $order->payment_status === 'paid' && $order->answer_image 
+                            ? Storage::url($order->answer_image) 
+                            : null,
                         'answered_at' => $order->answered_at ? \Carbon\Carbon::parse($order->answered_at)->format('Y-m-d H:i:s') : null,
                     ],
                     'answerer' => [
