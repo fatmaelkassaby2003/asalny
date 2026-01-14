@@ -51,6 +51,29 @@ Route::get('/test-pusher', function () {
     ]);
 });
 
+// 🧪 Test JWT Authentication 
+Route::get('/test-jwt', function () {
+    return response()->json([
+        'success' => true,
+        'message' => 'JWT authentication is NOT required for this endpoint',
+        'auth_guard' => config('auth.defaults.guard'),
+        'api_guard_driver' => config('auth.guards.api.driver'),
+    ]);
+});
+
+// 🔐 Test JWT with Auth Required
+Route::middleware('auth:api')->get('/test-jwt-protected', function () {
+    $user = auth('api')->user();
+    
+    return response()->json([
+        'success' => true,
+        'message' => 'JWT authentication SUCCESS!',
+        'user_id' => $user->id,
+        'user_name' => $user->name,
+        'user_phone' => $user->phone,
+    ]);
+});
+
 Route::get('/test-fawaterak-direct', function () {
     try {
         $response = \Illuminate\Support\Facades\Http::timeout(30)
