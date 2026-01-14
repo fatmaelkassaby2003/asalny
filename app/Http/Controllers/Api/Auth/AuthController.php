@@ -44,7 +44,8 @@ class AuthController extends Controller
                 'is_active' => true,
             ]);
 
-            $token = $user->createToken('auth_token')->plainTextToken;
+            // $token = $user->createToken('auth_token')->plainTextToken; // Sanctum
+            $token = auth('api')->login($user); // JWT
 
             Log::info('✅ New user registered', ['user_id' => $user->id, 'phone' => $user->phone]);
 
@@ -138,19 +139,11 @@ class AuthController extends Controller
                 return $this->errorResponse('المستخدم غير موجود', 404);
             }
 
-            // حذف التوكنات القديمة
-            $deletedCount = $user->tokens()->count();
-            $user->tokens()->delete();
-
-            if ($deletedCount > 0) {
-                Log::info('🗑️ Old tokens deleted', [
-                    'user_id' => $user->id,
-                    'count' => $deletedCount
-                ]);
-            }
-
+            // حذف التوكنات القديمة (غير ضروري مع JWT إلا لو بنستخدم Blacklist)
+            // JWT هو Stateless، لكن ممكن نعمل Invalidate للتوكن الحالي لو معانا
+            
             // إنشاء توكن جديد
-            $token = $user->createToken('auth_token')->plainTextToken;
+            $token = auth('api')->login($user);
             Log::info('🔑 New token created', ['user_id' => $user->id]);
 
             return $this->successResponse(
@@ -173,10 +166,9 @@ class AuthController extends Controller
     public function logout(Request $request): JsonResponse
     {
         try {
-            $user = $request->user();
-            $request->user()->currentAccessToken()->delete();
+            auth('api')->logout();
 
-            Log::info('👋 User logged out', ['user_id' => $user->id]);
+            Log::info('👋 User logged out', ['user_id' => $user->id ?? 'unknown']);
 
             return $this->successResponse('تم تسجيل الخروج بنجاح');
         } catch (\Exception $e) {
@@ -191,13 +183,11 @@ class AuthController extends Controller
     public function logoutAll(Request $request): JsonResponse
     {
         try {
-            $user = $request->user();
-            $deletedCount = $user->tokens()->count();
-            $user->tokens()->delete();
+            // مع JWT، تسجيل الخروج من جهاز واحد (Invalidate Token) هو المتاح عادةً
+            auth('api')->logout();
 
-            Log::info('👋 User logged out from all devices', [
-                'user_id' => $user->id,
-                'tokens_deleted' => $deletedCount
+            Log::info('👋 User logged out (JWT Invalidate)', [
+                'user_id' => $user->id ?? 'unknown'
             ]);
 
             return $this->successResponse('تم تسجيل الخروج من جميع الأجهزة بنجاح');

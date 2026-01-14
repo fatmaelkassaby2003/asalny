@@ -12,6 +12,7 @@
         "laravel/sanctum": "^3.3",
         "laravel/tinker": "^2.8",
         "league/uri-parser": "^1.4",
+        "php-open-source-saver/jwt-auth": "^2.3",
         "twilio/sdk": "^8.8"
     },
     "require-dev": {

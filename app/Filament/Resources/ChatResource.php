@@ -62,7 +62,8 @@ class ChatResource extends Resource
                 //
             ])
             ->actions([
-                Tables\Actions\EditAction::make()->iconButton()->color('primary'),
+                Tables\Actions\ViewAction::make()->iconButton()->color('info')->tooltip('عرض المحادثة'),
+                Tables\Actions\DeleteAction::make()->iconButton()->color('danger')->tooltip('حذف المحادثة'),
             ])
             ->actionsColumnLabel('الاجراءات')
             ->actionsAlignment('left')
@@ -74,7 +75,7 @@ class ChatResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            RelationManagers\MessagesRelationManager::class,
         ];
     }
     
@@ -83,6 +84,7 @@ class ChatResource extends Resource
         return [
             'index' => Pages\ListChats::route('/'),
             'create' => Pages\CreateChat::route('/create'),
+            'view' => Pages\ViewChat::route('/{record}'),
             'edit' => Pages\EditChat::route('/{record}/edit'),
         ];
     }    
