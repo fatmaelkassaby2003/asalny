@@ -32,6 +32,25 @@ Route::get('/test-fawaterak', function () {
     ]);
 });
 
+// 🧪 Test Pusher endpoint (Config Check Only)
+Route::get('/test-pusher', function () {
+    $pusherKey = config('broadcasting.connections.pusher.key');
+    $pusherSecret = config('broadcasting.connections.pusher.secret');
+    $pusherAppId = config('broadcasting.connections.pusher.app_id');
+    $pusherCluster = config('broadcasting.connections.pusher.options.cluster');
+    
+    return response()->json([
+        'success' => true,
+        'pusher_key' => $pusherKey,
+        'pusher_secret' => $pusherSecret ? 'Set (hidden)' : 'Not set',
+        'pusher_app_id' => $pusherAppId,
+        'pusher_cluster' => $pusherCluster,
+        'broadcast_driver' => config('broadcasting.default'),
+        'pusher_configured' => !empty($pusherKey) && !empty($pusherSecret) && !empty($pusherAppId),
+        'message' => 'Configuration check completed',
+    ]);
+});
+
 Route::get('/test-fawaterak-direct', function () {
     try {
         $response = \Illuminate\Support\Facades\Http::timeout(30)
