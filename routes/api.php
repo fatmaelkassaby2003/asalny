@@ -77,7 +77,7 @@ Route::get('/test-fawaterak-direct', function () {
 });
 
 // Routes محمية
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware('auth:api')->group(function () {
     // المصادقة
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/logout-all', [AuthController::class, 'logoutAll']);
