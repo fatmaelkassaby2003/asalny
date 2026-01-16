@@ -99,6 +99,9 @@ class PaymentController extends Controller
                 "إيداع عبر {$methodName} - Invoice: {$data['refrence_id']}"
             );
 
+            // ✅ إرسال إشعار للمستخدم بنجاح الإيداع
+            \App\Helpers\NotificationHelper::notifyWalletDeposit($user, $amount, $data['refrence_id']);
+
             Log::info('✅ تم إيداع المبلغ في المحفظة', [
                 'user_id' => $user->id,
                 'amount' => $amount,

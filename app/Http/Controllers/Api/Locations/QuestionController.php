@@ -200,10 +200,39 @@ class QuestionController extends Controller
                 'is_active' => true,
             ]);
 
+            // ✅ إرسال إشعار للمجيبين القريبين
+            $nearbyAnswerers = \App\Models\User::where('is_asker', false)
+                ->whereNotNull('fcm_token')
+                ->whereHas('locations', function ($query) use ($location) {
+                    $query->selectRaw(
+                        "*, (6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) AS distance",
+                        [$location->latitude, $location->longitude, $location->latitude]
+                    )->havingRaw('distance <= ?', [5]); // 5 كم
+                })
+                ->get()
+                ->map(function ($answerer) use ($location) {
+                    $answererLocation = $answerer->locations()->first();
+                    if ($answererLocation) {
+                        $distance = \App\Models\UserLocation::calculateDistance(
+                            $answererLocation->latitude,
+                            $answererLocation->longitude,
+                            $location->latitude,
+                            $location->longitude
+                        );
+                        $answerer->distance_km = round($distance, 2);
+                    }
+                    return $answerer;
+                });
+
+            if ($nearbyAnswerers->isNotEmpty()) {
+                \App\Helpers\NotificationHelper::notifyNearbyAnswerers($question, $nearbyAnswerers);
+            }
+
             Log::info('✅ سؤال تم إضافته', [
                 'question_id' => $question->id,
                 'user_id' => $user->id,
                 'location_id' => $location->id,
+                'notified_answerers' => $nearbyAnswerers->count(),
             ]);
 
             return response()->json([

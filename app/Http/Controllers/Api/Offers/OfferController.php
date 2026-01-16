@@ -201,6 +201,11 @@ public function store(Request $request): JsonResponse
             'status' => 'pending',
         ]);
 
+        // ✅ إرسال إشعار للسائل بالعرض الجديد
+        $offer->load('answerer', 'question');
+        $asker = $question->user;
+        \App\Helpers\NotificationHelper::notifyNewOffer($offer, $asker);
+
         Log::info('✅ Offer created with location', [
             'offer_id' => $offer->id,
             'question_id' => $questionId,
@@ -637,6 +642,10 @@ public function store(Request $request): JsonResponse
                 // ✅ قبول العرض
                 $offer->accept();
 
+                // ✅ إرسال إشعار للمجيب بقبول العرض
+                $answerer = $offer->answerer;
+                \App\Helpers\NotificationHelper::notifyOfferAccepted($offer, $answerer);
+
                 // ✅ إنشاء طلب (Order)
                 $expiresAt = Carbon::now()->addMinutes($offer->response_time);
                 
@@ -678,6 +687,10 @@ public function store(Request $request): JsonResponse
                     ]
                 ], 200);
             } else {
+                // ✅ إرسال إشعار للمجيب بالرفض قبل الحذف
+                $answerer = $offer->answerer;
+                \App\Helpers\NotificationHelper::notifyOfferRejected($offer, $answerer);
+
                 // رفض العرض وحذفه من قاعدة البيانات
                 $offerId = $offer->id;
                 $offer->delete();

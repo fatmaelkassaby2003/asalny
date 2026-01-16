@@ -46,6 +46,16 @@ class User extends Authenticatable implements FilamentUser, JWTSubject
         'description',
         'wallet_balance',
         'profile_image',
+        'fcm_token',
+    ];
+
+    /**
+     * حماية الحقول الحساسة من التعديل عبر mass assignment
+     */
+    protected $guarded = [
+        'id',
+        'email_verified_at',
+        'remember_token',
     ];
 
     protected $hidden = [

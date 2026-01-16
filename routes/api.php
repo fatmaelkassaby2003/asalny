@@ -118,13 +118,15 @@ Route::get('/test-fawaterak-direct', function () {
     }
 });
 
+
+
 // Routes محمية
 Route::middleware('auth:api')->group(function () {
     // المصادقة
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/logout-all', [AuthController::class, 'logoutAll']);
     Route::get('/me', [ProfileController::class, 'getMyProfile']); // ✅ بروفايلي مع الإحصائيات
-    Route::put('/me', [ProfileController::class, 'updateProfile']); // ✅ تحديث بروفايلي
+    Route::post('/me', [ProfileController::class, 'updateProfile']); // ✅ تحديث بروفايلي (POST)
     
     // المحفظة
     Route::prefix('wallet')->group(function () {

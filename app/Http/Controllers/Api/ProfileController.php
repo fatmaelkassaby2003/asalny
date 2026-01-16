@@ -84,15 +84,23 @@ class ProfileController extends Controller
 
             $validator = Validator::make($request->all(), [
                 'name' => 'sometimes|string|max:255',
+                'phone' => 'sometimes|string|unique:users,phone,' . $user->id,
+                'email' => 'sometimes|email|unique:users,email,' . $user->id,
                 'description' => 'sometimes|nullable|string|max:500',
                 'gender' => 'sometimes|in:male,female',
-                'profile_image' => 'sometimes|image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB max
+                'is_asker' => 'sometimes|boolean',
+                'is_active' => 'sometimes|boolean',
+                'wallet_balance' => 'sometimes|numeric|min:0',
+                'profile_image' => 'sometimes|image|mimes:jpeg,png,jpg,gif|max:5120',
             ], [
                 'name.max' => 'الاسم لا يمكن أن يتجاوز 255 حرف',
+                'phone.unique' => 'رقم الهاتف مستخدم بالفعل',
+                'email.unique' => 'البريد الإلكتروني مستخدم بالفعل',
                 'description.max' => 'الوصف لا يمكن أن يتجاوز 500 حرف',
                 'profile_image.image' => 'يجب أن يكون الملف صورة',
                 'profile_image.mimes' => 'الصورة يجب أن تكون jpeg, png, jpg, أو gif',
                 'profile_image.max' => 'حجم الصورة لا يمكن أن يتجاوز 5 ميجا',
+                'wallet_balance.min' => 'رصيد المحفظة لا يمكن أن يكون سالب',
             ]);
 
             if ($validator->fails()) {
@@ -103,7 +111,17 @@ class ProfileController extends Controller
                 ], 422);
             }
 
-            $dataToUpdate = $request->only(['name', 'description', 'gender']);
+            // ✅ السماح بتحديث جميع الحقول
+            $dataToUpdate = $request->only([
+                'name', 
+                'phone', 
+                'email', 
+                'description', 
+                'gender', 
+                'is_asker', 
+                'is_active', 
+                'wallet_balance'
+            ]);
 
             // ✅ رفع صورة البروفايل للـ public
             if ($request->hasFile('profile_image')) {
@@ -137,8 +155,13 @@ class ProfileController extends Controller
                 'data' => [
                     'id' => $user->id,
                     'name' => $user->name,
+                    'phone' => $user->phone,
+                    'email' => $user->email,
                     'description' => $user->description,
                     'gender' => $user->gender,
+                    'is_asker' => $user->is_asker,
+                    'is_active' => $user->is_active,
+                    'wallet_balance' => $user->wallet_balance,
                     'profile_image' => $profileImageUrl,
                 ],
             ], 200);
@@ -281,6 +304,11 @@ class ProfileController extends Controller
                 'stars' => $request->stars,
                 'comment' => $request->comment,
             ]);
+
+            // ✅ إرسال إشعار للمجيب بالتقييم
+            $rating->load('asker');
+            $rating->rating = $rating->stars; // Map stars to rating for NotificationHelper
+            \App\Helpers\NotificationHelper::notifyNewRating($rating, $answerer);
 
             Log::info('✅ تم إضافة تقييم جديد', [
                 'rating_id' => $rating->id,

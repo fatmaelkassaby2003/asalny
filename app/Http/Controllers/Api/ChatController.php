@@ -317,6 +317,13 @@ class ChatController extends Controller
             // تحميل علاقة المرسل
             $message->load('sender');
 
+            // ✅ إرسال إشعار للمستقبل
+            $receiverId = $chat->asker_id === $user->id ? $chat->answerer_id : $chat->asker_id;
+            $receiver = \App\Models\User::find($receiverId);
+            if ($receiver) {
+                \App\Helpers\NotificationHelper::notifyNewMessage($message, $receiver);
+            }
+
             // بث الرسالة عبر Pusher
             broadcast(new MessageSent($message))->toOthers();
 
