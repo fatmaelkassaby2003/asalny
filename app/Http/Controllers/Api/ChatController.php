@@ -193,6 +193,7 @@ class ChatController extends Controller
                     return [
                         'id' => $message->id,
                         'message' => $message->message,
+                        'image' => $message->image ? url($message->image) : null,
                         'sender' => [
                             'id' => $message->sender->id,
                             'name' => $message->sender->name,
@@ -288,10 +289,14 @@ class ChatController extends Controller
             }
 
             $validator = Validator::make($request->all(), [
-                'message' => 'required|string|max:2000',
+                'message' => 'required_without:image|string|max:2000',
+                'image' => 'required_without:message|image|mimes:jpeg,png,jpg,gif|max:10240', // 10MB
             ], [
-                'message.required' => 'نص الرسالة مطلوب',
-                'message.max' => 'الرسالة طويلة جداً',
+                'message.required_without' => 'يجب إدخال نص الرسالة أو صورة',
+                'image.required_without' => 'يجب إدخال صورة أو نص',
+                'image.image' => 'يجب أن يكون الملف صورة',
+                'image.mimes' => 'الصورة يجب أن تكون من نوع: jpeg, png, jpg, gif',
+                'image.max' => 'حجم الصورة يجب أن لا يتجاوز 10 ميجا',
             ]);
 
             if ($validator->fails()) {
@@ -302,12 +307,25 @@ class ChatController extends Controller
                 ], 422);
             }
 
-            // إنشاء الرسالة
-            $message = Message::create([
+            $messageData = [
                 'chat_id' => $chat->id,
                 'sender_id' => $user->id,
                 'message' => $request->message,
-            ]);
+            ];
+
+            // ✅ رفع الصورة إن وجدت
+            if ($request->hasFile('image')) {
+                $image = $request->file('image');
+                $imageName = 'chat_' . $chat->id . '_' . time() . '.' . $image->getClientOriginalExtension();
+                
+                // حفظ في public/uploads/chat
+                $image->move(public_path('uploads/chat'), $imageName);
+                
+                $messageData['image'] = 'uploads/chat/' . $imageName;
+            }
+
+            // إنشاء الرسالة
+            $message = Message::create($messageData);
 
             // تحديث وقت آخر رسالة في المحادثة
             $chat->update([
@@ -331,6 +349,7 @@ class ChatController extends Controller
                 'message_id' => $message->id,
                 'chat_id' => $chat->id,
                 'sender_id' => $user->id,
+                'has_image' => $message->image ? true : false,
             ]);
 
             return response()->json([
@@ -340,6 +359,7 @@ class ChatController extends Controller
                     'message' => [
                         'id' => $message->id,
                         'message' => $message->message,
+                        'image' => $message->image ? url($message->image) : null,
                         'sender' => [
                             'id' => $message->sender->id,
                             'name' => $message->sender->name,
