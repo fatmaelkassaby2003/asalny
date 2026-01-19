@@ -1,8 +1,10 @@
 <?php
 
+
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Notification;
 use App\Services\FirebaseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -183,6 +185,166 @@ class NotificationController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to send notifications',
+            ], 500);
+        }
+    }
+
+    /**
+     * Get all user notifications (paginated)
+     */
+    public function getAll(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            $perPage = $request->input('per_page', 20);
+
+            $notifications = Notification::where('user_id', $user->id)
+                ->orderBy('created_at', 'desc')
+                ->paginate($perPage);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'notifications' => $notifications->items(),
+                    'pagination' => [
+                        'total' => $notifications->total(),
+                        'per_page' => $notifications->perPage(),
+                        'current_page' => $notifications->currentPage(),
+                        'last_page' => $notifications->lastPage(),
+                    ],
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('❌ Failed to get notifications', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve notifications',
+            ], 500);
+        }
+    }
+
+    /**
+     * Get latest notifications
+     */
+    public function getLatest(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            $limit = $request->input('limit', 10);
+
+            $notifications = Notification::where('user_id', $user->id)
+                ->orderBy('created_at', 'desc')
+                ->limit($limit)
+                ->get();
+
+            $unreadCount = Notification::where('user_id', $user->id)
+                ->unread()
+                ->count();
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'notifications' => $notifications,
+                    'unread_count' => $unreadCount,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('❌ Failed to get latest notifications', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve notifications',
+            ], 500);
+        }
+    }
+
+    /**
+     * Get unread notifications count
+     */
+    public function getUnreadCount(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+
+            $count = Notification::where('user_id', $user->id)
+                ->unread()
+                ->count();
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'unread_count' => $count,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to get count',
+            ], 500);
+        }
+    }
+
+    /**
+     * Mark notification as read
+     */
+    public function markAsRead(Request $request, $notificationId): JsonResponse
+    {
+        try {
+            $user = $request->user();
+
+            $notification = Notification::where('id', $notificationId)
+                ->where('user_id', $user->id)
+                ->first();
+
+            if (!$notification) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Notification not found',
+                ], 404);
+            }
+
+            $notification->markAsRead();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Notification marked as read',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to mark as read',
+            ], 500);
+        }
+    }
+
+    /**
+     * Mark all notifications as read
+     */
+    public function markAllAsRead(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+
+            Notification::where('user_id', $user->id)
+                ->unread()
+                ->update([
+                    'is_read' => true,
+                    'read_at' => now(),
+                ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'All notifications marked as read',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to mark all as read',
             ], 500);
         }
     }

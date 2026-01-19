@@ -64,6 +64,7 @@ class MessageSent implements ShouldBroadcast
             'chat_id' => $this->message->chat_id,
             'sender_id' => $this->message->sender_id,
             'message' => $this->message->message,
+            'image' => $this->message->image ? url($this->message->image) : null,
             'is_read' => $this->message->is_read,
             'created_at' => $this->message->created_at->format('Y-m-d H:i:s'),
             'sender' => [

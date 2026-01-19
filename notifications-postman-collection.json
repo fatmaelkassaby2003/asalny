@@ -1,0 +1,409 @@
+{
+    "info": {
+        "name": "Asalny - Notifications API",
+        "description": "Complete Firebase Cloud Messaging & Notification History",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{jwt_token}}",
+                "type": "string"
+            }
+        ]
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "https://asalny.ahdafweb.com/api",
+            "type": "string"
+        },
+        {
+            "key": "jwt_token",
+            "value": "",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "FCM - Push Notifications",
+            "item": [
+                {
+                    "name": "1. Register FCM Token",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"fcm_token\": \"fK3kL9mNpQ:APA91bH7_xQzyourFCMtokenHere\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/notifications/register-token",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "notifications",
+                                "register-token"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "2. Send Test Notification",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/notifications/test",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "notifications",
+                                "test"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "3. Send to User (Admin)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"user_id\": 5,\n    \"title\": \"رسالة جديدة\",\n    \"body\": \"لديك رسالة جديدة من أحمد\",\n    \"data\": {\n        \"type\": \"chat\",\n        \"chat_id\": \"10\"\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/notifications/send-to-user",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "notifications",
+                                "send-to-user"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "4. Send to Multiple (Admin)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"user_ids\": [1, 2, 3, 4, 5],\n    \"title\": \"إعلان عام\",\n    \"body\": \"تحديث جديد متوفر الآن!\",\n    \"data\": {\n        \"type\": \"announcement\"\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/notifications/send-to-multiple",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "notifications",
+                                "send-to-multiple"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Notification History",
+            "item": [
+                {
+                    "name": "1. Get All Notifications",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/notifications?per_page=20&page=1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "notifications"
+                            ],
+                            "query": [
+                                {
+                                    "key": "per_page",
+                                    "value": "20"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                }
+                            ]
+                        },
+                        "description": "Get all user notifications (paginated)"
+                    }
+                },
+                {
+                    "name": "2. Get Latest Notifications",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/notifications/latest?limit=10",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "notifications",
+                                "latest"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                }
+                            ]
+                        },
+                        "description": "Get latest N notifications (default 10)"
+                    }
+                },
+                {
+                    "name": "3. Get Unread Count",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/notifications/unread-count",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "notifications",
+                                "unread-count"
+                            ]
+                        },
+                        "description": "Get count of unread notifications"
+                    }
+                },
+                {
+                    "name": "4. Mark as Read",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/notifications/5/read",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "notifications",
+                                "5",
+                                "read"
+                            ]
+                        },
+                        "description": "Mark specific notification as read"
+                    }
+                },
+                {
+                    "name": "5. Mark All as Read",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/notifications/read-all",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "notifications",
+                                "read-all"
+                            ]
+                        },
+                        "description": "Mark all user notifications as read"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Example Notifications",
+            "item": [
+                {
+                    "name": "New Question",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"user_id\": 10,\n    \"title\": \"سؤال جديد قريب منك! 📍\",\n    \"body\": \"سؤال جديد في منطقتك بسعر 50 جنيه\",\n    \"data\": {\n        \"type\": \"new_question\",\n        \"question_id\": \"25\",\n        \"price\": \"50.00\"\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/notifications/send-to-user",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "notifications",
+                                "send-to-user"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "New Offer",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"user_id\": 8,\n    \"title\": \"عرض جديد على سؤالك! 💼\",\n    \"body\": \"محمد قدم عرض بقيمة 50 جنيه\",\n    \"data\": {\n        \"type\": \"new_offer\",\n        \"offer_id\": \"25\",\n        \"question_id\": \"15\"\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/notifications/send-to-user",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "notifications",
+                                "send-to-user"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "New Message",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"user_id\": 10,\n    \"title\": \"رسالة من أحمد 💬\",\n    \"body\": \"مرحباً! هل يمكنك المساعدة؟\",\n    \"data\": {\n        \"type\": \"chat\",\n        \"chat_id\": \"15\",\n        \"sender_id\": \"5\"\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/notifications/send-to-user",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "notifications",
+                                "send-to-user"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Payment Received",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"user_id\": 3,\n    \"title\": \"تم استلام الدفع 💰\",\n    \"body\": \"تم إيداع 150 جنيه في محفظتك\",\n    \"data\": {\n        \"type\": \"payment_received\",\n        \"amount\": \"150.00\"\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/notifications/send-to-user",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "notifications",
+                                "send-to-user"
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}

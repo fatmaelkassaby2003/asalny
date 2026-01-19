@@ -128,6 +128,15 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/me', [ProfileController::class, 'getMyProfile']); // ✅ بروفايلي مع الإحصائيات
     Route::post('/me', [ProfileController::class, 'updateProfile']); // ✅ تحديث بروفايلي (POST)
     
+    // Notifications - History
+    Route::prefix('notifications')->group(function () {
+        Route::get('/', [NotificationController::class, 'getAll']); // Get all notifications (paginated)
+        Route::get('/latest', [NotificationController::class, 'getLatest']); // Get latest (limit 10)
+        Route::get('/unread-count', [NotificationController::class, 'getUnreadCount']); // Get unread count
+        Route::post('/{notificationId}/read', [NotificationController::class, 'markAsRead']); // Mark as read
+        Route::post('/read-all', [NotificationController::class, 'markAllAsRead']); // Mark all as read
+    });
+    
     // المحفظة
     Route::prefix('wallet')->group(function () {
         Route::get('/balance', [WalletController::class, 'balance']);
