@@ -67,6 +67,7 @@ class ChatController extends Controller
                             'id' => $otherParticipant->id,
                             'name' => $otherParticipant->name,
                             'phone' => $otherParticipant->phone,
+                            'image' => $otherParticipant->image ? url($otherParticipant->image) : null,
                         ],
                         'created_at' => $chat->created_at->format('Y-m-d H:i:s'),
                     ]
@@ -124,9 +125,12 @@ class ChatController extends Controller
                             'id' => $otherParticipant->id,
                             'name' => $otherParticipant->name,
                             'phone' => $otherParticipant->phone,
+                            'image' => $otherParticipant->image ? url($otherParticipant->image) : null,
                         ],
                         'last_message' => $lastMessage ? [
                             'message' => $lastMessage->message,
+                            'image' => $lastMessage->image,
+                            'image_url' => $lastMessage->image ? url($lastMessage->image) : null,
                             'sender_name' => $lastMessage->sender->name,
                             'is_mine' => $lastMessage->sender_id === $user->id,
                             'created_at' => $lastMessage->created_at->format('Y-m-d H:i:s'),
@@ -193,7 +197,8 @@ class ChatController extends Controller
                     return [
                         'id' => $message->id,
                         'message' => $message->message,
-                        'image' => $message->image ? url($message->image) : null,
+                        'image' => $message->image,
+                        'image_url' => $message->image ? url($message->image) : null,
                         'sender' => [
                             'id' => $message->sender->id,
                             'name' => $message->sender->name,

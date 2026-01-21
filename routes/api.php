@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\Wallet\WalletController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\NotificationController;
 
 // Routes عامة
 Route::post('/register', [AuthController::class, 'register']);
@@ -130,6 +131,7 @@ Route::middleware('auth:api')->group(function () {
     
     // Notifications - History
     Route::prefix('notifications')->group(function () {
+        Route::post('/register-token', [NotificationController::class, 'registerToken']); // ✅ Register FCM Token
         Route::get('/', [NotificationController::class, 'getAll']); // Get all notifications (paginated)
         Route::get('/latest', [NotificationController::class, 'getLatest']); // Get latest (limit 10)
         Route::get('/unread-count', [NotificationController::class, 'getUnreadCount']); // Get unread count
@@ -186,9 +188,11 @@ Route::middleware('auth:api')->group(function () {
 
     // Orders Routes (معالجة العروض)
     Route::prefix('orders')->group(function () {
-        Route::get('/asker', [OrderController::class, 'askerOrders']); // عرض طلبات السائل
-        Route::get('/answerer', [OrderController::class, 'answererOrders']); // عرض طلبات المجيب
-        Route::post('/answer', [OrderController::class, 'answerOrder']); // الإجابة على طلب
+    // Orders
+    Route::get('/asker', [OrderController::class, 'askerOrders']); // Asker orders (All statuses)
+    Route::get('/answerer', [OrderController::class, 'answererOrders']); // Answerer orders (Pending only)
+    Route::get('/history', [OrderController::class, 'history']); // Answerer history (Completed & Paid)
+    Route::post('/answer', [OrderController::class, 'answerOrder']); // Answer a request
         Route::post('/cancel', [OrderController::class, 'cancelOrder']); // إلغاء طلب
         Route::get('/{orderId}/follow', [OrderController::class, 'followAnswer']); // متابعة الإجابة
         Route::post('/approve', [OrderController::class, 'approveAnswer']); // اعتماد الإجابة

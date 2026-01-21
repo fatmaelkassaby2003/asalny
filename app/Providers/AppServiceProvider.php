@@ -24,5 +24,10 @@ class AppServiceProvider extends ServiceProvider
         if($this->app->environment('production')) {
             \Illuminate\Support\Facades\URL::forceScheme('https');
         }
+        
+        // Register custom Filament CSS
+        \Filament\Support\Facades\FilamentAsset::register([
+            \Filament\Support\Assets\Css::make('custom-notification-spacing', asset('css/custom-notification-spacing.css')),
+        ]);
     }
 }

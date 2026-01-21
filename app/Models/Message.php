@@ -21,9 +21,15 @@ class Message extends Model
     protected function casts(): array
     {
         return [
-            'is_read' => 'boolean',
             'read_at' => 'datetime',
         ];
+    }
+
+    protected $appends = ['image_url'];
+
+    public function getImageUrlAttribute()
+    {
+        return $this->image ? url($this->image) : null;
     }
 
     /**

@@ -1,0 +1,8 @@
+/* Custom spacing for notification create form */
+form.fi-form {
+    padding-bottom: 150px !important;
+}
+
+.fi-form-actions {
+    margin-top: 90px !important;
+}

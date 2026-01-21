@@ -14,6 +14,7 @@ class Rating extends Model
         'answerer_id',
         'stars',
         'comment',
+        'order_id',
     ];
 
     protected $casts = [
@@ -34,5 +35,13 @@ class Rating extends Model
     public function answerer()
     {
         return $this->belongsTo(User::class, 'answerer_id');
+    }
+
+    /**
+     * الطلب المرتبط بالتقييم
+     */
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
     }
 }

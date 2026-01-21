@@ -43,9 +43,9 @@ class OrderController extends Controller
                             'price' => $order->price,
                             'response_time' => $order->response_time,
                             'remaining_minutes' => $order->remaining_time,
-                            'expires_at' => $order->expires_at ? $order->expires_at->format('Y-m-d H:i:s') : null,
-                            'answered_at' => $order->answered_at ? $order->answered_at->format('Y-m-d H:i:s') : null,
-                            'approved_at' => $order->approved_at ? $order->approved_at->format('Y-m-d H:i:s') : null,
+                            'expires_at' => $order->expires_at ? \Carbon\Carbon::parse($order->expires_at)->format('Y-m-d H:i:s') : null,
+                            'answered_at' => $order->answered_at ? \Carbon\Carbon::parse($order->answered_at)->format('Y-m-d H:i:s') : null,
+                            'approved_at' => $order->approved_at ? \Carbon\Carbon::parse($order->approved_at)->format('Y-m-d H:i:s') : null,
                             'dispute_count' => $order->dispute_count,
                             'question' => [
                                 'id' => $order->question->id,
@@ -122,7 +122,7 @@ class OrderController extends Controller
                             'response_time' => $order->response_time,
                             'remaining_minutes' => $order->remaining_time,
                             'expires_at' => \Carbon\Carbon::parse($order->expires_at)->format('Y-m-d H:i'),
-                            'answered_at' => $order->answered_at ? $order->answered_at->format('Y-m-d H:i:s') : null,
+                            'answered_at' => $order->answered_at ? \Carbon\Carbon::parse($order->answered_at)->format('Y-m-d H:i:s') : null,
                             'question' => [
                                 'id' => $order->question->id,
                                 'question' => $order->question->question,
@@ -151,6 +151,62 @@ class OrderController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'حدث خطأ أثناء عرض الطلبات',
+            ], 500);
+        }
+    }
+
+    /**
+     * سجل إجابات المجيب (مع التقييم والفلوس)
+     */
+    public function history(Request $request): JsonResponse
+    {
+        try {
+            $answerer = $request->user();
+
+            if ($answerer->is_asker) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'هذه الخاصية للمجيبين فقط',
+                ], 403);
+            }
+
+            $orders = Order::with(['question', 'rating'])
+                ->where('answerer_id', $answerer->id)
+                ->whereNotNull('approved_at') // فقط الطلبات المكتملة والموافق عليها
+                ->orderBy('approved_at', 'desc')
+                ->get()
+                ->map(function ($order) {
+                    return [
+                        'id' => $order->id,
+                        'question' => $order->question->question,
+                        'answer' => $order->answer_text,
+                        'price' => $order->price,
+                        'currency' => 'EGP',
+                        'rating' => $order->rating ? $order->rating->stars : null,
+                        'rating_comment' => $order->rating ? $order->rating->comment : null,
+                        'date' => \Carbon\Carbon::parse($order->approved_at)->format('Y-m-d H:i:s'),
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'history' => $orders,
+                    'total_earnings' => $orders->sum('price'),
+                    'average_rating' => $orders->avg('rating') ?? 0,
+                    'count' => $orders->count(),
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('❌ خطأ في جلب سجل المجيب', [
+                'error' => $e->getMessage(),
+                'user_id' => $request->user()->id,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'حدث خطأ أثناء جلب السجل',
             ], 500);
         }
     }
@@ -320,9 +376,9 @@ class OrderController extends Controller
                         'price' => $order->price,
                         'answer_text' => $order->answer_text,
                         'answer_image' => $order->answer_image ? Storage::url($order->answer_image) : null,
-                        'answered_at' => $order->answered_at->format('Y-m-d H:i:s'),
+                        'answered_at' => $order->answered_at ? \Carbon\Carbon::parse($order->answered_at)->format('Y-m-d H:i:s') : null,
                         'response_time' => $order->response_time,
-                        'expires_at' => $order->expires_at->format('Y-m-d H:i:s'),
+                        'expires_at' => $order->expires_at ? \Carbon\Carbon::parse($order->expires_at)->format('Y-m-d H:i:s') : null,
                         'remaining_minutes' => $order->remaining_time,
                         'held_amount' => $order->held_amount,
                     ],
@@ -487,7 +543,7 @@ class OrderController extends Controller
                             'price' => $order->price,
                             'response_time' => $order->response_time,
                             'remaining_minutes' => $order->remaining_time,
-                            'expires_at' => $order->expires_at->format('Y-m-d H:i:s'),
+                            'expires_at' => $order->expires_at ? \Carbon\Carbon::parse($order->expires_at)->format('Y-m-d H:i:s') : null,
                             // إظهار الإجابة فقط بعد الدفع
                             'answer_text' => $order->payment_status === 'paid' 
                                 ? $order->answer_text 
@@ -495,7 +551,7 @@ class OrderController extends Controller
                             'answer_image' => $order->payment_status === 'paid' && $order->answer_image 
                                 ? Storage::url($order->answer_image) 
                                 : null,
-                            'answered_at' => $order->answered_at ? $order->answered_at->format('Y-m-d H:i:s') : null,
+                            'answered_at' => $order->answered_at ? \Carbon\Carbon::parse($order->answered_at)->format('Y-m-d H:i:s') : null,
                             'answerer' => [
                                 'id' => $order->answerer->id,
                                 'name' => $order->answerer->name,
@@ -695,7 +751,7 @@ class OrderController extends Controller
                         'order' => [
                             'id' => $order->id,
                             'status' => $order->status,
-                            'approved_at' => $order->approved_at->format('Y-m-d H:i:s'),
+                            'approved_at' => $order->approved_at ? \Carbon\Carbon::parse($order->approved_at)->format('Y-m-d H:i:s') : null,
                         ],
                         'wallet_balance' => $walletService->getBalance($asker),
                     ]

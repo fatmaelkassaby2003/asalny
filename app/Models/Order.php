@@ -25,6 +25,8 @@ class Order extends Model
         'expires_at',
         'dispute_count',
         'dispute_reason',
+        'admin_response',
+        'admin_responded_at',
         'approved_at',
         'disputed_at',
         'escalated_at',
@@ -43,6 +45,7 @@ class Order extends Model
             'approved_at' => 'datetime',
             'disputed_at' => 'datetime',
             'escalated_at' => 'datetime',
+            'admin_responded_at' => 'datetime',
             'paid_at' => 'datetime',
         ];
     }
@@ -87,6 +90,14 @@ class Order extends Model
     public function chat()
     {
         return $this->hasOne(Chat::class, 'order_id');
+    }
+
+    /**
+     * التقييم المرتبط بالطلب
+     */
+    public function rating()
+    {
+        return $this->hasOne(Rating::class, 'order_id');
     }
 
     /**

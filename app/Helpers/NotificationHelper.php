@@ -351,4 +351,36 @@ class NotificationHelper
             $data
         );
     }
+
+    /**
+     * إشعار: رد الإدارة على الاعتراض
+     */
+    public static function notifyAdminResponse($order, $asker)
+    {
+        if (!$asker->fcm_token) return;
+
+        $firebase = self::getFirebase();
+        $firebase->sendToUser(
+            $asker->fcm_token,
+            "رد من الإدارة 📧",
+            "تم الرد على اعتراضك. اطلع على الرد في التطبيق",
+            [
+                'type' => 'admin_response',
+                'order_id' => (string)$order->id,
+                'question_id' => (string)$order->question_id,
+            ]
+        );
+        
+        // Store in database
+        \App\Models\Notification::create([
+            'user_id' => $asker->id,
+            'type' => 'admin_response',
+            'title' => 'رد من الإدارة 📧',
+            'body' => 'تم الرد على اعتراضك. اطلع على الرد في التطبيق',
+            'data' => [
+                'order_id' => (string)$order->id,
+                'question_id' => (string)$order->question_id,
+            ],
+        ]);
+    }
 }
