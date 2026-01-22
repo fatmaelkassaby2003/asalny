@@ -13,8 +13,36 @@ class FirebaseService
 
     public function __construct()
     {
-        $this->credentials = json_decode(file_get_contents(storage_path('app/firebase-credentials.json')), true);
+        // Initialization moved to lazy loading to prevent 500 error on instantiation
+    }
+
+    protected function getCredentials()
+    {
+        if ($this->credentials) {
+            return $this->credentials;
+        }
+
+        $path = storage_path('app/firebase-credentials.json');
+        
+        if (!file_exists($path)) {
+            throw new \Exception("Firebase credentials file not found at: $path");
+        }
+
+        $content = file_get_contents($path);
+        
+        if (!$content) {
+             throw new \Exception("Firebase credentials file is empty");
+        }
+
+        $this->credentials = json_decode($content, true);
+        
+        if (!$this->credentials || !isset($this->credentials['project_id'])) {
+            throw new \Exception("Invalid Firebase credentials JSON");
+        }
+
         $this->projectId = $this->credentials['project_id'];
+        
+        return $this->credentials;
     }
 
     /**
