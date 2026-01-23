@@ -12,6 +12,13 @@ use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\StaticPageController;
+
+// Static Pages (Public - بدون auth)
+Route::get('/terms', [StaticPageController::class, 'terms']);
+Route::get('/privacy', [StaticPageController::class, 'privacy']);
+Route::get('/faqs', [StaticPageController::class, 'faqs']);
+Route::get('/about', [StaticPageController::class, 'about']);
 
 // Routes عامة
 Route::post('/register', [AuthController::class, 'register']);

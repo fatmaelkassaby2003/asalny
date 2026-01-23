@@ -1,0 +1,92 @@
+{
+    "info": {
+        "name": "Asalny - Static Pages",
+        "description": "API endpoints للصفحات الثابتة",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "الشروط والأحكام",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/api/terms",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "terms"
+                    ]
+                },
+                "description": "الحصول على الشروط والأحكام بالعربي والإنجليزي"
+            },
+            "response": []
+        },
+        {
+            "name": "سياسة الخصوصية",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/api/privacy",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "privacy"
+                    ]
+                },
+                "description": "الحصول على سياسة الخصوصية بالعربي والإنجليزي"
+            },
+            "response": []
+        },
+        {
+            "name": "الأسئلة الشائعة",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/api/faqs",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "faqs"
+                    ]
+                },
+                "description": "الحصول على قائمة الأسئلة الشائعة بالعربي والإنجليزي"
+            },
+            "response": []
+        },
+        {
+            "name": "عن التطبيق",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/api/about",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "about"
+                    ]
+                },
+                "description": "الحصول على معلومات عن التطبيق بالعربي والإنجليزي مع معلومات التواصل"
+            },
+            "response": []
+        }
+    ],
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:8000",
+            "type": "string"
+        }
+    ]
+}
