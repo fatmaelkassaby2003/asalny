@@ -26,57 +26,34 @@ class FaqResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Section::make('السؤال والإجابة بالعربي')
-                    ->icon('heroicon-o-language')
-                    ->description('أدخل السؤال والإجابة باللغة العربية')
-                    ->schema([
-                        Forms\Components\TextInput::make('question_ar')
-                            ->label('السؤال')
-                            ->placeholder('مثال: كيف يمكنني التسجيل؟')
-                            ->required()
-                            ->maxLength(255)
-                            ->columnSpanFull(),
-
-                        Forms\Components\Textarea::make('answer_ar')
-                            ->label('الإجابة')
-                            ->placeholder('اكتب الإجابة هنا...')
-                            ->required()
-                            ->rows(6)
-                            ->columnSpanFull(),
-                    ])
-                    ->collapsible()
+                Forms\Components\TextInput::make('question_ar')
+                    ->label('السؤال بالعربي')
+                    ->required()
+                    ->maxLength(255)
                     ->columnSpanFull(),
 
-                Forms\Components\Section::make('Question & Answer in English')
-                    ->icon('heroicon-o-language')
-                    ->description('Enter question and answer in English')
-                    ->schema([
-                        Forms\Components\TextInput::make('question_en')
-                            ->label('Question')
-                            ->placeholder('Example: How can I register?')
-                            ->required()
-                            ->maxLength(255)
-                            ->columnSpanFull(),
-
-                        Forms\Components\Textarea::make('answer_en')
-                            ->label('Answer')
-                            ->placeholder('Write answer here...')
-                            ->required()
-                            ->rows(6)
-                            ->columnSpanFull(),
-                    ])
-                    ->collapsible()
+                Forms\Components\TextInput::make('question_en')
+                    ->label('السؤال بالإنجليزي')
+                    ->required()
+                    ->maxLength(255)
                     ->columnSpanFull(),
 
-                Forms\Components\Section::make('الإعدادات')
-                    ->schema([
-                        Forms\Components\Toggle::make('is_active')
-                            ->label('مفعل')
-                            ->helperText('تفعيل أو تعطيل ظهور السؤال في التطبيق')
-                            ->default(true)
-                            ->inline(false),
-                    ])
+                Forms\Components\Textarea::make('answer_ar')
+                    ->label('الإجابة بالعربي')
+                    ->required()
+                    ->rows(4)
                     ->columnSpanFull(),
+
+                Forms\Components\Textarea::make('answer_en')
+                    ->label('الإجابة بالإنجليزي')
+                    ->required()
+                    ->rows(4)
+                    ->columnSpanFull(),
+
+                Forms\Components\Toggle::make('is_active')
+                    ->label('مفعل')
+                    ->default(true)
+                    ->inline(false),
             ]);
     }
 
@@ -84,36 +61,33 @@ class FaqResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('id')
+                    ->label('ID')
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('question_ar')
                     ->label('السؤال')
                     ->searchable()
-                    ->limit(50)
-                    ->wrap(),
-
-                Tables\Columns\TextColumn::make('answer_ar')
-                    ->label('الإجابة')
-                    ->limit(40)
-                    ->wrap(),
-
+                    ->limit(40),
                 Tables\Columns\ToggleColumn::make('is_active')
                     ->label('مفعل')
                     ->onColor('success')
                     ->offColor('danger'),
-
                 Tables\Columns\TextColumn::make('updated_at')
                     ->label('آخر تحديث')
-                    ->dateTime('Y-m-d H:i')
-                    ->sortable(),
+                    ->dateTime('Y-m-d H:i'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make()
-                    ->label('تعديل'),
-                Tables\Actions\DeleteAction::make()
-                    ->label('حذف'),
+                Tables\Actions\ViewAction::make()
+                    ->label('عرض')
+                    ->iconButton()
+                    ->color('primary'),
+                Tables\Actions\EditAction::make()->iconButton()->color('primary'),
+                Tables\Actions\DeleteAction::make()->iconButton()->color('danger'),
             ])
+            ->actionsColumnLabel('الاجراءات')
+            ->actionsAlignment('left')
             ->bulkActions([
-                Tables\Actions\DeleteBulkAction::make()
-                    ->label('حذف المحدد'),
+                Tables\Actions\DeleteBulkAction::make(),
             ]);
     }
 

@@ -119,6 +119,12 @@ class AdminNotificationResource extends Resource
                         'promo' => 'عرض',
                     ]),
             ])
+            ->actions([
+                Tables\Actions\ViewAction::make()
+                    ->label('عرض')
+                    ->iconButton()
+                    ->color('primary'),
+            ])
             ->defaultSort('created_at', 'desc');
     }
 

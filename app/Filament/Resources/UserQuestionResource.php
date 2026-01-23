@@ -68,6 +68,10 @@ class UserQuestionResource extends Resource
                 //
             ])
             ->actions([
+                Tables\Actions\ViewAction::make()
+                    ->label('عرض')
+                    ->iconButton()
+                    ->color('primary'),
                 Tables\Actions\EditAction::make()->iconButton()->color('primary'),
                 Tables\Actions\DeleteAction::make()->iconButton()->color('danger'),
             ])

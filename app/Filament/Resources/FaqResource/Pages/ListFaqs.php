@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\FaqResource\Pages;
 
 use App\Filament\Resources\FaqResource;
+use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 
 class ListFaqs extends ListRecords
@@ -12,7 +13,9 @@ class ListFaqs extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            \Filament\Actions\CreateAction::make()->label('إضافة سؤال'),
+            Actions\CreateAction::make()
+                ->label('إضافة سؤال')
+                ->url(fn (): string => FaqResource::getUrl('create')),
         ];
     }
 }

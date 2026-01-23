@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\PrivacyPolicyResource\Pages;
 
 use App\Filament\Resources\PrivacyPolicyResource;
+use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 
 class ListPrivacyPolicies extends ListRecords
@@ -12,7 +13,9 @@ class ListPrivacyPolicies extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            \Filament\Actions\CreateAction::make()->label('إضافة'),
+            Actions\CreateAction::make()
+                ->label('إضافة')
+                ->url(fn (): string => PrivacyPolicyResource::getUrl('create')),
         ];
     }
 }

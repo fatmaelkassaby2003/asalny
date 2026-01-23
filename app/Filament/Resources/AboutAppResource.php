@@ -26,108 +26,46 @@ class AboutAppResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Section::make('المحتوى بالعربي')
-                    ->icon('heroicon-o-language')
-                    ->description('أدخل المحتوى باللغة العربية')
-                    ->schema([
-                        Forms\Components\TextInput::make('title_ar')
-                            ->label('العنوان')
-                            ->placeholder('مثال: عن التطبيق')
-                            ->required()
-                            ->maxLength(255)
-                            ->columnSpanFull(),
-
-                        Forms\Components\RichEditor::make('content_ar')
-                            ->label('المحتوى')
-                            ->placeholder('اكتب المحتوى هنا...')
-                            ->required()
-                            ->columnSpanFull()
-                            ->toolbarButtons([
-                                'bold',
-                                'italic',
-                                'underline',
-                                'strike',
-                                'bulletList',
-                                'orderedList',
-                                'h2',
-                                'h3',
-                                'link',
-                                'redo',
-                                'undo',
-                            ]),
-                    ])
-                    ->collapsible()
+                Forms\Components\TextInput::make('title_ar')
+                    ->label('العنوان بالعربي')
+                    ->required()
+                    ->maxLength(255)
                     ->columnSpanFull(),
 
-                Forms\Components\Section::make('Content in English')
-                    ->icon('heroicon-o-language')
-                    ->description('Enter content in English')
-                    ->schema([
-                        Forms\Components\TextInput::make('title_en')
-                            ->label('Title')
-                            ->placeholder('Example: About the App')
-                            ->required()
-                            ->maxLength(255)
-                            ->columnSpanFull(),
-
-                        Forms\Components\RichEditor::make('content_en')
-                            ->label('Content')
-                            ->placeholder('Write content here...')
-                            ->required()
-                            ->columnSpanFull()
-                            ->toolbarButtons([
-                                'bold',
-                                'italic',
-                                'underline',
-                                'strike',
-                                'bulletList',
-                                'orderedList',
-                                'h2',
-                                'h3',
-                                'link',
-                                'redo',
-                                'undo',
-                            ]),
-                    ])
-                    ->collapsible()
+                Forms\Components\TextInput::make('title_en')
+                    ->label('العنوان بالإنجليزي')
+                    ->required()
+                    ->maxLength(255)
                     ->columnSpanFull(),
 
-                Forms\Components\Section::make('معلومات التطبيق')
-                    ->icon('heroicon-o-device-phone-mobile')
-                    ->description('معلومات إضافية عن التطبيق')
-                    ->schema([
-                        Forms\Components\TextInput::make('app_version')
-                            ->label('إصدار التطبيق')
-                            ->placeholder('مثال: 1.0.0')
-                            ->maxLength(50)
-                            ->prefixIcon('heroicon-o-hashtag'),
-
-                        Forms\Components\TextInput::make('contact_email')
-                            ->label('البريد الإلكتروني')
-                            ->placeholder('example@domain.com')
-                            ->email()
-                            ->maxLength(255)
-                            ->prefixIcon('heroicon-o-envelope'),
-
-                        Forms\Components\TextInput::make('contact_phone')
-                            ->label('رقم التواصل')
-                            ->placeholder('+966 5XX XXX XXX')
-                            ->tel()
-                            ->maxLength(50)
-                            ->prefixIcon('heroicon-o-phone'),
-                    ])
-                    ->columns(3)
+                Forms\Components\RichEditor::make('content_ar')
+                    ->label('المحتوى بالعربي')
+                    ->required()
                     ->columnSpanFull(),
 
-                Forms\Components\Section::make('الإعدادات')
-                    ->schema([
-                        Forms\Components\Toggle::make('is_active')
-                            ->label('مفعلة')
-                            ->helperText('تفعيل أو تعطيل ظهور الصفحة في التطبيق')
-                            ->default(true)
-                            ->inline(false),
-                    ])
+                Forms\Components\RichEditor::make('content_en')
+                    ->label('المحتوى بالإنجليزي')
+                    ->required()
                     ->columnSpanFull(),
+
+                Forms\Components\TextInput::make('app_version')
+                    ->label('إصدار التطبيق')
+                    ->maxLength(50),
+
+                Forms\Components\TextInput::make('contact_email')
+                    ->label('البريد الإلكتروني')
+                    ->email()
+                    ->maxLength(255),
+
+                Forms\Components\TextInput::make('contact_phone')
+                    ->label('رقم التواصل')
+                    ->tel()
+                    ->maxLength(50),
+
+                Forms\Components\Toggle::make('is_active')
+                    ->label('مفعلة')
+                    ->default(true)
+                    ->inline(false),
             ]);
     }
 
@@ -135,33 +73,36 @@ class AboutAppResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('id')
+                    ->label('ID')
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('title_ar')
                     ->label('العنوان')
-                    ->searchable()
-                    ->limit(50),
-
+                    ->searchable(),
                 Tables\Columns\TextColumn::make('app_version')
                     ->label('الإصدار')
                     ->badge()
                     ->color('info'),
-
-                Tables\Columns\TextColumn::make('contact_email')
-                    ->label('البريد')
-                    ->icon('heroicon-o-envelope'),
-
                 Tables\Columns\ToggleColumn::make('is_active')
                     ->label('مفعلة')
                     ->onColor('success')
                     ->offColor('danger'),
-
                 Tables\Columns\TextColumn::make('updated_at')
                     ->label('آخر تحديث')
-                    ->dateTime('Y-m-d H:i')
-                    ->sortable(),
+                    ->dateTime('Y-m-d H:i'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make()
-                    ->label('تعديل'),
+                Tables\Actions\ViewAction::make()
+                    ->label('عرض')
+                    ->iconButton()
+                    ->color('primary'),
+                Tables\Actions\EditAction::make()->iconButton()->color('primary'),
+                Tables\Actions\DeleteAction::make()->iconButton()->color('danger'),
+            ])
+            ->actionsColumnLabel('الاجراءات')
+            ->actionsAlignment('left')
+            ->bulkActions([
+                Tables\Actions\DeleteBulkAction::make(),
             ]);
     }
 

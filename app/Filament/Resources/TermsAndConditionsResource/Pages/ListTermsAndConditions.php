@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\TermsAndConditionsResource\Pages;
 
 use App\Filament\Resources\TermsAndConditionsResource;
+use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 
 class ListTermsAndConditions extends ListRecords
@@ -12,7 +13,9 @@ class ListTermsAndConditions extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            \Filament\Actions\CreateAction::make()->label('إضافة'),
+            Actions\CreateAction::make()
+                ->label('إضافة')
+                ->url(fn (): string => TermsAndConditionsResource::getUrl('create')),
         ];
     }
 }
