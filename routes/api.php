@@ -132,6 +132,9 @@ Route::middleware('auth:api')->group(function () {
     // Notifications - History
     Route::prefix('notifications')->group(function () {
         Route::post('/register-token', [NotificationController::class, 'registerToken']); // ✅ Register FCM Token
+        Route::post('/test', [NotificationController::class, 'sendTestNotification']); // ✅ Send test notification
+        Route::post('/send-to-user', [NotificationController::class, 'sendToUser']); // ✅ Send to specific user (Admin)
+        Route::post('/send-to-multiple', [NotificationController::class, 'sendToMultiple']); // ✅ Send to multiple users (Admin)
         Route::get('/', [NotificationController::class, 'getAll']); // Get all notifications (paginated)
         Route::get('/latest', [NotificationController::class, 'getLatest']); // Get latest (limit 10)
         Route::get('/unread-count', [NotificationController::class, 'getUnreadCount']); // Get unread count

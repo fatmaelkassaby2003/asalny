@@ -51,12 +51,15 @@ class FirebaseService
     protected function getAccessToken(): string
     {
         return Cache::remember('firebase_access_token', 3000, function () {
+            // Ensure credentials are loaded
+            $credentials = $this->getCredentials();
+            
             // Create JWT
             $now = time();
             $jwtHeader = base64_encode(json_encode(['alg' => 'RS256', 'typ' => 'JWT']));
             
             $jwtClaim = base64_encode(json_encode([
-                'iss' => $this->credentials['client_email'],
+                'iss' => $credentials['client_email'],
                 'scope' => 'https://www.googleapis.com/auth/firebase.messaging',
                 'aud' => 'https://oauth2.googleapis.com/token',
                 'exp' => $now + 3600,

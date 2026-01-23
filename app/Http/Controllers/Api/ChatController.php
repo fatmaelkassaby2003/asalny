@@ -125,7 +125,7 @@ class ChatController extends Controller
                             'id' => $otherParticipant->id,
                             'name' => $otherParticipant->name,
                             'phone' => $otherParticipant->phone,
-                            'image' => $otherParticipant->image ? url($otherParticipant->image) : null,
+                            'image' => $otherParticipant->profile_image ? url($otherParticipant->profile_image) : null,
                         ],
                         'last_message' => $lastMessage ? [
                             'message' => $lastMessage->message,
