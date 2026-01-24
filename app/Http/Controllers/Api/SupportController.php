@@ -29,7 +29,7 @@ class SupportController extends Controller
 
         return response()->json([
             'status' => true,
-            'message' => 'Support categories retrieved successfully',
+            'message' => 'تم استرجاع أنواع المشاكل بنجاح',
             'data' => $categories
         ]);
     }
@@ -49,7 +49,7 @@ class SupportController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'status' => false,
-                'message' => 'Validation error',
+                'message' => 'خطأ في البيانات المرسلة',
                 'errors' => $validator->errors()
             ], 422);
         }
@@ -67,7 +67,7 @@ class SupportController extends Controller
 
         return response()->json([
             'status' => true,
-            'message' => 'Support ticket created successfully',
+            'message' => 'تم استلام بلاغك بنجاح، سنقوم بالرد عليك قريباً',
             'data' => $ticket
         ], 201);
     }
@@ -91,7 +91,7 @@ class SupportController extends Controller
 
         return response()->json([
             'status' => true,
-            'message' => 'User tickets retrieved successfully',
+            'message' => 'تم استرجاع بلاغاتك بنجاح',
             'data' => $tickets
         ]);
     }

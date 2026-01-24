@@ -80,6 +80,114 @@
                 "description": "الحصول على معلومات عن التطبيق بالعربي والإنجليزي مع معلومات التواصل"
             },
             "response": []
+        },
+        {
+            "name": "أنواع مشاكل الدعم",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}",
+                        "type": "text"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/support/categories",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "support",
+                        "categories"
+                    ]
+                },
+                "description": "الحصول على قائمة أنواع المشاكل المتاحة للاختيار منها"
+            },
+            "response": []
+        },
+        {
+            "name": "إنشاء بلاغ دعم فني",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}",
+                        "type": "text"
+                    },
+                    {
+                        "key": "Accept",
+                        "value": "application/json",
+                        "type": "text"
+                    }
+                ],
+                "body": {
+                    "mode": "formdata",
+                    "formdata": [
+                        {
+                            "key": "category_id",
+                            "value": "1",
+                            "type": "text"
+                        },
+                        {
+                            "key": "title",
+                            "value": "مشكلة في الدفع",
+                            "type": "text"
+                        },
+                        {
+                            "key": "description",
+                            "value": "حاولت الدفع ولم يتم تأكيد العملية",
+                            "type": "text"
+                        },
+                        {
+                            "key": "image",
+                            "type": "file",
+                            "src": []
+                        }
+                    ]
+                },
+                "url": {
+                    "raw": "{{base_url}}/api/support/tickets",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "support",
+                        "tickets"
+                    ]
+                },
+                "description": "إرسال بلاغ جديد للدعم الفني"
+            },
+            "response": []
+        },
+        {
+            "name": "بلاغاتي (الدعم الفني)",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}",
+                        "type": "text"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/support/tickets",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "support",
+                        "tickets"
+                    ]
+                },
+                "description": "جلب قائمة البلاغات الخاصة بالمستخدم الحالي"
+            },
+            "response": []
         }
     ],
     "variable": [

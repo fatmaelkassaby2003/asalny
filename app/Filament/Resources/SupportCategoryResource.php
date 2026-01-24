@@ -25,25 +25,35 @@ class SupportCategoryResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Section::make()
+                // صف الأسماء
+                Forms\Components\Grid::make(2)
                     ->schema([
                         Forms\Components\TextInput::make('name_ar')
                             ->label('الاسم بالعربي')
-                            ->required()
-                            ->maxLength(255),
+                            ->required(),
+
                         Forms\Components\TextInput::make('name_en')
-                            ->label('الاسم بالإنجليزية')
-                            ->required()
+                            ->label('الاسم بالإنجليزي')
+                            ->nullable()
                             ->maxLength(255),
-                        Forms\Components\FileUpload::make('icon')
-                            ->label('الأيقونة')
-                            ->image()
-                            ->directory('support-icons')
-                            ->columnSpanFull(),
-                        Forms\Components\Toggle::make('is_active')
-                            ->label('مفعل')
-                            ->default(true),
-                    ])->columns(2),
+                    ]),
+
+                // الأيقونة
+                Forms\Components\FileUpload::make('icon')
+                    ->label('الأيقونة')
+                    ->image()
+                    ->directory('support-icons')
+                    ->columnSpanFull(),
+
+                // زر التفعيل
+                Forms\Components\Toggle::make('is_active')
+                    ->label('مفعل')
+                    ->default(true),
+                    
+                    
+                // مسافة ضخمة قبل أزرار الحفظ
+                Forms\Components\Placeholder::make('form_actions_spacer')
+                    ->label(''),
             ]);
     }
 
