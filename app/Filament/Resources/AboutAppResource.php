@@ -26,46 +26,77 @@ class AboutAppResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('title_ar')
-                    ->label('العنوان بالعربي')
-                    ->required()
-                    ->maxLength(255)
+                // العناوين (صف واحد - عمودين)
+                Forms\Components\Grid::make(2)
+                    ->schema([
+                        Forms\Components\TextInput::make('title_ar')
+                            ->label('العنوان بالعربي')
+                            ->required()
+                            ->maxLength(255),
+
+                        Forms\Components\TextInput::make('title_en')
+                            ->label('العنوان بالإنجليزي')
+                            ->required()
+                            ->maxLength(255),
+                    ]),
+
+                // // فاصل بين العناوين والمحتوى
+                // Forms\Components\Placeholder::make('spacer_1')
+                //     ->label('')
+                //     ->content('')
+                //     ->extraAttributes(['style' => 'height: 0px;'])
+                //     ->columnSpanFull(),
+
+                // المحتوى (صف واحد - عمودين)
+                Forms\Components\Grid::make(2)
+                    ->schema([
+                        Forms\Components\RichEditor::make('content_ar')
+                            ->label('المحتوى بالعربي')
+                            ->required()
+                            ->extraAttributes(['style' => 'max-height: 200px; overflow-y: auto;']),
+
+                        Forms\Components\RichEditor::make('content_en')
+                            ->label('المحتوى بالإنجليزي')
+                            ->required()
+                            ->extraAttributes(['style' => 'max-height: 200px; overflow-y: auto;']),
+                    ]),
+
+                // فاصل كبير بين المحتوى وبيانات التواصل
+                Forms\Components\Placeholder::make('spacer_2')
+                    ->label('')
+                    ->content('')
+                    ->extraAttributes(['style' => 'height: 50px;'])
                     ->columnSpanFull(),
 
-                Forms\Components\TextInput::make('title_en')
-                    ->label('العنوان بالإنجليزي')
-                    ->required()
-                    ->maxLength(255)
-                    ->columnSpanFull(),
-
-                Forms\Components\RichEditor::make('content_ar')
-                    ->label('المحتوى بالعربي')
-                    ->required()
-                    ->columnSpanFull(),
-
-                Forms\Components\RichEditor::make('content_en')
-                    ->label('المحتوى بالإنجليزي')
-                    ->required()
-                    ->columnSpanFull(),
-
+                // بيانات التواصل (كل حقل في سطر منفصل)
                 Forms\Components\TextInput::make('app_version')
                     ->label('إصدار التطبيق')
-                    ->maxLength(50),
+                    ->maxLength(50)
+                    ->columnSpanFull(),
 
                 Forms\Components\TextInput::make('contact_email')
                     ->label('البريد الإلكتروني')
                     ->email()
-                    ->maxLength(255),
+                    ->maxLength(255)
+                    ->columnSpanFull(),
 
                 Forms\Components\TextInput::make('contact_phone')
                     ->label('رقم التواصل')
                     ->tel()
-                    ->maxLength(50),
+                    ->maxLength(50)
+                    ->columnSpanFull(),
+                // // فاصل بين بيانات التواصل والتفعيل
+                // Forms\Components\Placeholder::make('spacer_3')
+                //     ->label('')
+                //     ->content('')
+                //     ->extraAttributes(['style' => 'height: 0px;'])
+                //     ->columnSpanFull(),
 
+                // زر التفعيل
                 Forms\Components\Toggle::make('is_active')
                     ->label('مفعلة')
-                    ->default(true)
-                    ->inline(false),
+                    ->default(true),
+                    
             ]);
     }
 

@@ -19,39 +19,53 @@ class PrivacyPolicyResource extends Resource
     protected static ?int $navigationSort = 2;
 
     protected static ?string $navigationLabel = 'سياسة الخصوصية';
-    protected static ?string $modelLabel = 'سياسة الخصوصية';
+    protected static ?string $modelLabel = 'سياسة';
     protected static ?string $pluralModelLabel = 'سياسة الخصوصية';
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('title_ar')
-                    ->label('العنوان بالعربي')
-                    ->required()
-                    ->maxLength(255)
+                // العناوين (صف واحد - عمودين)
+                Forms\Components\Grid::make(2)
+                    ->schema([
+                        Forms\Components\TextInput::make('title_ar')
+                            ->label('العنوان بالعربي')
+                            ->required()
+                            ->maxLength(255),
+
+                        Forms\Components\TextInput::make('title_en')
+                            ->label('العنوان بالإنجليزي')
+                            ->required()
+                            ->maxLength(255),
+                    ]),
+
+                // المحتوى (صف واحد - عمودين)
+                Forms\Components\Grid::make(2)
+                    ->schema([
+                        Forms\Components\RichEditor::make('content_ar')
+                            ->label('المحتوى بالعربي')
+                            ->required()
+                            ->extraAttributes(['style' => 'max-height: 200px; overflow-y: auto;']),
+
+                        Forms\Components\RichEditor::make('content_en')
+                            ->label('المحتوى بالإنجليزي')
+                            ->required()
+                            ->extraAttributes(['style' => 'max-height: 200px; overflow-y: auto;']),
+                    ]),
+
+                // فاصل قبل زر التفعيل
+                Forms\Components\Placeholder::make('spacer_before_toggle')
+                    ->label('')
+                    ->content('')
+                    ->extraAttributes(['style' => 'height: 50px;'])
                     ->columnSpanFull(),
 
-                Forms\Components\TextInput::make('title_en')
-                    ->label('العنوان بالإنجليزي')
-                    ->required()
-                    ->maxLength(255)
-                    ->columnSpanFull(),
-
-                Forms\Components\RichEditor::make('content_ar')
-                    ->label('المحتوى بالعربي')
-                    ->required()
-                    ->columnSpanFull(),
-
-                Forms\Components\RichEditor::make('content_en')
-                    ->label('المحتوى بالإنجليزي')
-                    ->required()
-                    ->columnSpanFull(),
-
+                // زر التفعيل
                 Forms\Components\Toggle::make('is_active')
                     ->label('مفعلة')
-                    ->default(true)
-                    ->inline(false),
+                    ->default(true),
+                    
             ]);
     }
 

@@ -14,8 +14,19 @@ class ListAboutApps extends ListRecords
     {
         return [
             Actions\CreateAction::make()
-                ->label('إضافة')
-                ->url(fn (): string => AboutAppResource::getUrl('create')),
+                ->label('إضافة جديد')
+                ->icon('heroicon-o-plus')
+                ->color('success'),
         ];
+    }
+
+    public function getTitle(): string
+    {
+        return 'عن التطبيق';
+    }
+
+    protected function getHeaderWidgets(): array
+    {
+        return [];
     }
 }

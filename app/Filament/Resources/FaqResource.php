@@ -29,31 +29,26 @@ class FaqResource extends Resource
                 Forms\Components\TextInput::make('question_ar')
                     ->label('السؤال بالعربي')
                     ->required()
-                    ->maxLength(255)
-                    ->columnSpanFull(),
+                    ->maxLength(255),
 
                 Forms\Components\TextInput::make('question_en')
                     ->label('السؤال بالإنجليزي')
                     ->required()
-                    ->maxLength(255)
-                    ->columnSpanFull(),
+                    ->maxLength(255),
 
                 Forms\Components\Textarea::make('answer_ar')
                     ->label('الإجابة بالعربي')
                     ->required()
-                    ->rows(4)
-                    ->columnSpanFull(),
+                    ->rows(4),
 
                 Forms\Components\Textarea::make('answer_en')
                     ->label('الإجابة بالإنجليزي')
                     ->required()
-                    ->rows(4)
-                    ->columnSpanFull(),
+                    ->rows(4),
 
                 Forms\Components\Toggle::make('is_active')
                     ->label('مفعل')
-                    ->default(true)
-                    ->inline(false),
+                    ->default(true),
             ]);
     }
 

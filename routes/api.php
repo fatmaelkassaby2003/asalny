@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\StaticPageController;
+use App\Http\Controllers\Api\SupportController;
 
 // Static Pages (Public - بدون auth)
 Route::get('/terms', [StaticPageController::class, 'terms']);
@@ -232,4 +233,11 @@ Route::middleware('auth:api')->group(function () {
     // بروفايل المجيبين والتقييمات
     Route::get('/answerers/{userId}/profile', [ProfileController::class, 'getAnswererProfile']); // بروفايل مجيب
     Route::post('/ratings', [ProfileController::class, 'rateAnswerer']); // تقييم مجيب
+
+    // الدعم الفني (Support Tickets)
+    Route::prefix('support')->group(function () {
+        Route::get('/categories', [SupportController::class, 'getCategories']); // أنواع المشاكل
+        Route::get('/tickets', [SupportController::class, 'getMyTickets']); // بلاغاتي
+        Route::post('/tickets', [SupportController::class, 'createTicket']); // إنشاء بلاغ
+    });
 });
